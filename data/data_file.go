@@ -37,8 +37,8 @@ func newDataFile(dir string, fid uint32) (*DataFile, error) {
 	}, nil
 }
 
-func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, error) {
-	return nil, nil
+func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
+	return nil, 0, nil
 }
 
 func (df *DataFile) Write(b []byte) error {

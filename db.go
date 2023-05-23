@@ -1,6 +1,7 @@
 package yojoudb
 
 import (
+	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -15,6 +16,7 @@ type DB struct {
 	activeFile *data.DataFile            // append & read
 	olderFiles map[uint32]*data.DataFile // read-only
 	index      index.Indexer
+	fileIds    []int // for loading index
 	options    *Options
 	mu         *sync.RWMutex
 }
@@ -52,6 +54,11 @@ func Open(options *Options) (*DB, error) {
 
 	// load data files
 	if err := db.loadDataFiles(); err != nil {
+		return nil, err
+	}
+
+	// load indexer
+	if err := db.loadIndexer(); err != nil {
 		return nil, err
 	}
 
@@ -99,6 +106,29 @@ func (db *DB) Get(key K) (V, error) {
 	}
 
 	return db.getValByLoc(loc)
+}
+
+func (db *DB) getValByLoc(loc *Loc) (V, error) {
+	var df *data.DataFile
+	if db.activeFile.FileId == loc.Fid {
+		df = db.activeFile
+	} else {
+		df = db.olderFiles[loc.Fid]
+	}
+	if df == nil {
+		return nil, ErrDataFileNotFound
+	}
+
+	lr, _, err := df.ReadLogRecord(loc.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	if lr.Type == data.LRDeleted {
+		return nil, ErrKeyNotFound
+	}
+
+	return lr.Val, nil
 }
 
 // appendLogRecord appends log record to active file
@@ -195,31 +225,54 @@ func (db *DB) loadDataFiles() error {
 			db.olderFiles[df.FileId] = df
 		}
 	}
+	db.fileIds = fileIds
 
 	return nil
 }
 
-func (db *DB) getValByLoc(loc *Loc) (V, error) {
-	var df *data.DataFile
-	if db.activeFile.FileId == loc.Fid {
-		df = db.activeFile
-	} else {
-		df = db.olderFiles[loc.Fid]
-	}
-	if df == nil {
-		return nil, ErrDataFileNotFound
+func (db *DB) loadIndexer() error {
+	if len(db.fileIds) == 0 {
+		return nil
 	}
 
-	lr, err := df.ReadLogRecord(loc.Offset)
-	if err != nil {
-		return nil, err
+	for _, fid := range db.fileIds {
+		var df *data.DataFile
+		fileId := uint32(fid)
+		if fileId == db.activeFile.FileId {
+			df = db.activeFile
+		} else {
+			df = db.olderFiles[fileId]
+		}
+
+		var offset int64 = 0
+		for {
+			lr, sz, err := df.ReadLogRecord(offset)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
+			}
+
+			loc := &Loc{
+				Fid:    fileId,
+				Offset: offset,
+			}
+			if lr.Type == data.LRDeleted {
+				db.index.Delete(lr.Key)
+			} else {
+				db.index.Put(lr.Key, loc)
+			}
+			offset += sz
+		}
+
+		// update the active file write offset
+		if fileId == db.activeFile.FileId {
+			db.activeFile.WriteOff = offset
+		}
 	}
 
-	if lr.Type == data.LRDeleted {
-		return nil, ErrKeyNotFound
-	}
-
-	return lr.Val, nil
+	return nil
 }
 
 func checkOptions(options *Options) error {
