@@ -19,6 +19,24 @@ type Indexer interface {
 	Delete(key K) bool
 }
 
+type IndexType = uint8
+
+const (
+	IndexBTree IndexType = iota
+	IndexART
+)
+
+func NewIndexer(indexType IndexType) Indexer {
+	switch indexType {
+	case IndexBTree:
+		return NewBTree()
+	case IndexART:
+		return nil
+	default:
+		panic("unsupported index type")
+	}
+}
+
 type Item struct {
 	key K
 	loc Loc

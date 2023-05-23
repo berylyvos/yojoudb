@@ -1,17 +1,21 @@
 package yojoudb
 
 import (
+	"os"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"yojoudb/data"
 	"yojoudb/index"
 )
 
-// DB database instance
+// DB database engine instance
 type DB struct {
 	activeFile *data.DataFile            // append & read
 	olderFiles map[uint32]*data.DataFile // read-only
 	index      index.Indexer
-	options    Options
+	options    *Options
 	mu         *sync.RWMutex
 }
 
@@ -26,6 +30,33 @@ type LR = data.LogRecord
 
 // Loc alias for data.LRLoc
 type Loc = data.LRLoc
+
+// Open opens the db engine instance
+func Open(options *Options) (*DB, error) {
+	if err := checkOptions(options); err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(options.DirPath); os.IsNotExist(err) {
+		if err = os.MkdirAll(options.DirPath, os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
+
+	db := &DB{
+		mu:         new(sync.RWMutex),
+		options:    options,
+		olderFiles: make(map[uint32]*data.DataFile),
+		index:      index.NewIndexer(options.IndexType),
+	}
+
+	// load data files
+	if err := db.loadDataFiles(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
 
 // Put puts key/val
 func (db *DB) Put(key K, val V) error {
@@ -134,6 +165,40 @@ func (db *DB) setActiveDataFile() error {
 	return nil
 }
 
+func (db *DB) loadDataFiles() error {
+	dir, err := os.ReadDir(db.options.DirPath)
+	if err != nil {
+		return err
+	}
+
+	var fileIds []int
+	for _, v := range dir {
+		if strings.HasSuffix(v.Name(), data.DataFileSuffix) {
+			fid, err := strconv.Atoi(strings.Split(v.Name(), ".")[0])
+			if err != nil {
+				return ErrDataDirBroken
+			}
+			fileIds = append(fileIds, fid)
+		}
+	}
+
+	// sort file ids and open every file, the last one is active
+	sort.Ints(fileIds)
+	for i, fid := range fileIds {
+		df, err := data.OpenDataFile(db.options.DirPath, uint32(fid))
+		if err != nil {
+			return err
+		}
+		if i == len(fileIds)-1 {
+			db.activeFile = df
+		} else {
+			db.olderFiles[df.FileId] = df
+		}
+	}
+
+	return nil
+}
+
 func (db *DB) getValByLoc(loc *Loc) (V, error) {
 	var df *data.DataFile
 	if db.activeFile.FileId == loc.Fid {
@@ -155,4 +220,14 @@ func (db *DB) getValByLoc(loc *Loc) (V, error) {
 	}
 
 	return lr.Val, nil
+}
+
+func checkOptions(options *Options) error {
+	if options.DirPath == "" {
+		return ErrDirPathIsEmpty
+	}
+	if options.DataFileSize <= 0 {
+		return ErrDataFileSizeNotPositive
+	}
+	return nil
 }
