@@ -37,6 +37,10 @@ func newDataFile(dir string, fid uint32) (*DataFile, error) {
 	}, nil
 }
 
+func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, error) {
+	return nil, nil
+}
+
 func (df *DataFile) Write(b []byte) error {
 	sz, err := df.IoManager.Write(b)
 	if err != nil {

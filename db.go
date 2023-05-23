@@ -8,7 +8,7 @@ import (
 
 // DB database instance
 type DB struct {
-	activeFile *data.DataFile            // append-only
+	activeFile *data.DataFile            // append & read
 	olderFiles map[uint32]*data.DataFile // read-only
 	index      index.Indexer
 	options    Options
@@ -50,6 +50,24 @@ func (db *DB) Put(key K, val V) error {
 	}
 
 	return nil
+}
+
+// Get gets value of the given key, return nil if key not found
+func (db *DB) Get(key K) (V, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	if len(key) == 0 {
+		return nil, ErrKeyEmpty
+	}
+
+	// find key from index
+	loc := db.index.Get(key)
+	if loc == nil {
+		return nil, ErrKeyNotFound
+	}
+
+	return db.getValByLoc(loc)
 }
 
 // appendLogRecord appends log record to active file
@@ -114,4 +132,27 @@ func (db *DB) setActiveDataFile() error {
 	}
 	db.activeFile = df
 	return nil
+}
+
+func (db *DB) getValByLoc(loc *Loc) (V, error) {
+	var df *data.DataFile
+	if db.activeFile.FileId == loc.Fid {
+		df = db.activeFile
+	} else {
+		df = db.olderFiles[loc.Fid]
+	}
+	if df == nil {
+		return nil, ErrDataFileNotFound
+	}
+
+	lr, err := df.ReadLogRecord(loc.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	if lr.Type == data.LRDeleted {
+		return nil, ErrKeyNotFound
+	}
+
+	return lr.Val, nil
 }
