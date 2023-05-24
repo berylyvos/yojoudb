@@ -46,8 +46,19 @@ func newDataFile(dir string, fid uint32) (*DataFile, error) {
 
 // ReadLogRecord read a log record with the offset in data file
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
+	fsz, err := df.IoManager.Size()
+	if err != nil {
+		return nil, 0, err
+	}
+	var headerSize int64 = maxLogRecordHeaderSize
+	// check corner case
+	// if there's no room to read max header size, just read until end of file
+	if offset+headerSize > fsz {
+		headerSize = fsz - offset
+	}
+
 	// read header
-	hb, err := df.readNBytes(maxLogRecordHeaderSize, offset)
+	hb, err := df.readNBytes(headerSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
