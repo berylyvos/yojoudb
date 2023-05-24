@@ -105,10 +105,11 @@ func (db *DB) Get(key K) (V, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	return db.getValByLoc(loc)
+	// if key exist, retrieve value by log record location
+	return db.retrievalByLoc(loc)
 }
 
-func (db *DB) getValByLoc(loc *Loc) (V, error) {
+func (db *DB) retrievalByLoc(loc *Loc) (V, error) {
 	var df *data.DataFile
 	if db.activeFile.FileId == loc.Fid {
 		df = db.activeFile
