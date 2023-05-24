@@ -109,6 +109,32 @@ func (db *DB) Get(key K) (V, error) {
 	return db.retrievalByLoc(loc)
 }
 
+func (db *DB) Delete(key K) error {
+	if len(key) == 0 {
+		return ErrKeyEmpty
+	}
+
+	if loc := db.index.Get(key); loc == nil {
+		return nil
+	}
+
+	lr := &LR{
+		Key:  key,
+		Type: data.LRDeleted,
+	}
+
+	_, err := db.appendLogRecord(lr)
+	if err != nil {
+		return err
+	}
+
+	ok := db.index.Delete(key)
+	if !ok {
+		return ErrIndexUpdateFailed
+	}
+	return nil
+}
+
 func (db *DB) retrievalByLoc(loc *Loc) (V, error) {
 	var df *data.DataFile
 	if db.activeFile.FileId == loc.Fid {
@@ -259,11 +285,16 @@ func (db *DB) loadIndexer() error {
 				Fid:    fileId,
 				Offset: offset,
 			}
+			var ok bool
 			if lr.Type == data.LRDeleted {
-				db.index.Delete(lr.Key)
+				ok = db.index.Delete(lr.Key)
 			} else {
-				db.index.Put(lr.Key, loc)
+				ok = db.index.Put(lr.Key, loc)
 			}
+			if !ok {
+				return ErrIndexUpdateFailed
+			}
+
 			offset += sz
 		}
 
