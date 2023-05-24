@@ -1,2 +1,2 @@
 # yojoudb
-a persistent kv store based on bitcask and supports redis protocol
+A persistent key-value store based on Bitcask that supports the Redis protocol.
