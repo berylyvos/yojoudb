@@ -188,7 +188,8 @@ func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
 		}
 	}
 
-	// write
+	// take down current write offset BEFORE WRITE
+	writeOff := db.activeFile.WriteOff
 	if err := db.activeFile.Write(encLr); err != nil {
 		return nil, err
 	}
@@ -203,7 +204,7 @@ func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
 	// return the log record location
 	return &Loc{
 		Fid:    db.activeFile.FileId,
-		Offset: db.activeFile.WriteOff,
+		Offset: writeOff,
 	}, nil
 }
 
