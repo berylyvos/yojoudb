@@ -33,7 +33,7 @@ func GetDataFileName(dir string, fid uint32) string {
 }
 
 func newDataFile(dir string, fid uint32) (*DataFile, error) {
-	fileIO, err := fio.NewFileIOManager(dir)
+	fileIO, err := fio.NewIOManager(dir)
 	if err != nil {
 		return nil, err
 	}
