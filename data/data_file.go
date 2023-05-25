@@ -44,7 +44,7 @@ func newDataFile(dir string, fid uint32) (*DataFile, error) {
 	}, nil
 }
 
-// ReadLogRecord read a log record with the offset in data file
+// ReadLogRecord read a log record by the offset in data file
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	fsz, err := df.IoManager.Size()
 	if err != nil {
