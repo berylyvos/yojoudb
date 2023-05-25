@@ -65,6 +65,25 @@ func Open(options *Options) (*DB, error) {
 	return db, nil
 }
 
+// Close closes the db engine instance
+func (db *DB) Close() error {
+	if db.activeFile == nil {
+		return nil
+	}
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if err := db.activeFile.Close(); err != nil {
+		return err
+	}
+	for _, old := range db.olderFiles {
+		if err := old.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Put puts key/val
 func (db *DB) Put(key K, val V) error {
 	if len(key) == 0 {
