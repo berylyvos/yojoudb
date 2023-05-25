@@ -39,12 +39,11 @@ type LRLoc struct {
 
 // Encode encodes LogRecord into bytes and returns the number of bytes encoded.
 //
-//		+-------------------  header  -------------------+
-//		+---------+---------+-------------+--------------+------------+-------------+
-//		|   crc   |  type   |  key size   |  value size  |    key     |    value    |
-//		+---------+---------+-------------+--------------+------------+-------------+
-//		|    4    |    1    |   var(5)    |    var(5)    |     var    |     var     |
-//	    +---------+---------+-------------+--------------+------------+-------------+
+//	+------------------ header -------------------+
+//	+---------+---------+------------+------------+------------+------------+
+//	|   crc   |   typ   |     ksz    |    vsz     |    key     |   value    |
+//	+--- 4 ---+--- 1 ---+-- var(5) --+-- var(5) --+------------+------------+
+//	|
 func Encode(lr *LogRecord) ([]byte, int64) {
 	header := make([]byte, maxLogRecordHeaderSize)
 	header[CRC32Size] = lr.Type
