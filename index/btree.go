@@ -3,6 +3,7 @@ package index
 import (
 	"bytes"
 	"github.com/google/btree"
+	"sort"
 	"sync"
 )
 
@@ -64,4 +65,77 @@ func (bt *BTree) Delete(key K) bool {
 		return false
 	}
 	return true
+}
+
+func (bt *BTree) Iterator(reverse bool) Iterator {
+	if bt.tree == nil {
+		return nil
+	}
+	bt.mu.RLock()
+	defer bt.mu.RUnlock()
+	return newBtreeIterator(bt.tree, reverse)
+}
+
+type btreeIterator struct {
+	curIndex int
+	reverse  bool
+	values   []*Item
+}
+
+func newBtreeIterator(tree *btree.BTree, reverse bool) *btreeIterator {
+	var idx int
+	values := make([]*Item, tree.Len())
+
+	saveValueFuc := func(it btree.Item) bool {
+		values[idx] = it.(*Item)
+		idx++
+		return true
+	}
+	if reverse {
+		tree.Descend(saveValueFuc)
+	} else {
+		tree.Ascend(saveValueFuc)
+	}
+
+	return &btreeIterator{
+		curIndex: 0,
+		reverse:  reverse,
+		values:   values,
+	}
+}
+
+func (bi *btreeIterator) Rewind() {
+	bi.curIndex = 0
+}
+
+func (bi *btreeIterator) Seek(key []byte) {
+	if bi.reverse {
+		bi.curIndex = sort.Search(len(bi.values), func(i int) bool {
+			return bytes.Compare(bi.values[i].key, key) <= 0
+		})
+	} else {
+		bi.curIndex = sort.Search(len(bi.values), func(i int) bool {
+			return bytes.Compare(bi.values[i].key, key) >= 0
+		})
+	}
+}
+
+func (bi *btreeIterator) Next() {
+	bi.curIndex += 1
+}
+
+func (bi *btreeIterator) Valid() bool {
+	return bi.curIndex < len(bi.values)
+}
+
+func (bi *btreeIterator) Key() []byte {
+	return bi.values[bi.curIndex].key
+}
+
+func (bi *btreeIterator) Value() Loc {
+	return bi.values[bi.curIndex].loc
+}
+
+func (bi *btreeIterator) Close() {
+	bi.values = nil
 }

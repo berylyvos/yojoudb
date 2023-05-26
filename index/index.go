@@ -15,6 +15,7 @@ type Indexer interface {
 	Put(key K, loc Loc) bool
 	Get(key K) Loc
 	Delete(key K) bool
+	Iterator(reverse bool) Iterator
 }
 
 type IndexType = uint8
@@ -33,4 +34,14 @@ func NewIndexer(indexType IndexType) Indexer {
 	default:
 		panic("unsupported index type")
 	}
+}
+
+type Iterator interface {
+	Rewind()
+	Seek(key []byte)
+	Next()
+	Valid() bool
+	Key() []byte
+	Value() Loc
+	Close()
 }
