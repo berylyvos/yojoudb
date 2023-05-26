@@ -189,6 +189,64 @@ func TestDB_Delete(t *testing.T) {
 	assert.Equal(t, val1, val2)
 }
 
+func TestDB_ListKeys(t *testing.T) {
+	opts := DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-test-list-keys")
+	opts.DirPath = dir
+	db, err := Open(opts)
+	defer destroyDB(db)
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	keys1 := db.ListKeys()
+	assert.Equal(t, 0, len(keys1))
+
+	err = db.Put(utils.TestKey(11), utils.RandValue(20))
+	assert.Nil(t, err)
+	keys2 := db.ListKeys()
+	assert.Equal(t, 1, len(keys2))
+
+	err = db.Put(utils.TestKey(22), utils.RandValue(20))
+	assert.Nil(t, err)
+	err = db.Put(utils.TestKey(33), utils.RandValue(20))
+	assert.Nil(t, err)
+	err = db.Put(utils.TestKey(44), utils.RandValue(20))
+	assert.Nil(t, err)
+
+	keys3 := db.ListKeys()
+	assert.Equal(t, 4, len(keys3))
+	for _, k := range keys3 {
+		assert.NotNil(t, k)
+	}
+}
+
+func TestDB_Fold(t *testing.T) {
+	opts := DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-test-fold")
+	opts.DirPath = dir
+	db, err := Open(opts)
+	defer destroyDB(db)
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	err = db.Put(utils.TestKey(11), utils.RandValue(20))
+	assert.Nil(t, err)
+	err = db.Put(utils.TestKey(22), utils.RandValue(20))
+	assert.Nil(t, err)
+	err = db.Put(utils.TestKey(33), utils.RandValue(20))
+	assert.Nil(t, err)
+	err = db.Put(utils.TestKey(44), utils.RandValue(20))
+	assert.Nil(t, err)
+
+	err = db.Fold(func(key []byte, value []byte) bool {
+		assert.NotNil(t, key)
+		assert.NotNil(t, value)
+		t.Log(string(key), string(value))
+		return true
+	})
+	assert.Nil(t, err)
+}
+
 func destroyDB(db *DB) {
 	if db != nil {
 		if db.activeFile != nil {

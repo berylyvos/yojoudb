@@ -16,6 +16,7 @@ type Indexer interface {
 	Get(key K) Loc
 	Delete(key K) bool
 	Iterator(reverse bool) Iterator
+	Size() int
 }
 
 type IndexType = uint8

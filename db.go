@@ -11,7 +11,7 @@ import (
 	"yojoudb/index"
 )
 
-// DB database engine instance
+// DB database instance
 type DB struct {
 	activeFile *data.DataFile            // append & read
 	olderFiles map[uint32]*data.DataFile // read-only
@@ -33,7 +33,7 @@ type LR = data.LogRecord
 // Loc alias for data.LRLoc
 type Loc = data.LRLoc
 
-// Open opens the db engine instance
+// Open opens a db instance.
 func Open(options *Options) (*DB, error) {
 	if err := checkOptions(options); err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func Open(options *Options) (*DB, error) {
 	return db, nil
 }
 
-// Close closes the db engine instance
+// Close closes the db instance. Closes active file and old files.
 func (db *DB) Close() error {
 	if db.activeFile == nil {
 		return nil
@@ -84,7 +84,17 @@ func (db *DB) Close() error {
 	return nil
 }
 
-// Put puts key/val
+// Sync syncs active file into disk.
+func (db *DB) Sync() error {
+	if db.activeFile == nil {
+		return nil
+	}
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	return db.activeFile.Sync()
+}
+
+// Put puts a normal log record with the given key/val.
 func (db *DB) Put(key K, val V) error {
 	if len(key) == 0 {
 		return ErrKeyEmpty
@@ -109,7 +119,7 @@ func (db *DB) Put(key K, val V) error {
 	return nil
 }
 
-// Get gets value of the given key, return nil if key not found
+// Get gets the value of the given key. Returns nil if key is not found.
 func (db *DB) Get(key K) (V, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
@@ -128,6 +138,8 @@ func (db *DB) Get(key K) (V, error) {
 	return db.retrievalByLoc(loc)
 }
 
+// Delete puts a delete-type log record of the given key,
+// and deletes the key in index. Returns nil if key is not found.
 func (db *DB) Delete(key K) error {
 	if len(key) == 0 {
 		return ErrKeyEmpty
@@ -150,6 +162,38 @@ func (db *DB) Delete(key K) error {
 	ok := db.index.Delete(key)
 	if !ok {
 		return ErrIndexUpdateFailed
+	}
+	return nil
+}
+
+// ListKeys returns all keys in db instance.
+func (db *DB) ListKeys() [][]byte {
+	keys := make([][]byte, db.index.Size())
+	it := db.NewIterator(DefaultIteratorOptions)
+	defer it.Close()
+	idx := 0
+	for it.Rewind(); it.Valid(); it.Next() {
+		keys[idx] = it.Key()
+		idx++
+	}
+	return keys
+}
+
+// Fold iterates every key/val, executes func on it, stops when func return false.
+func (db *DB) Fold(fn func(key []byte, value []byte) bool) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	it := db.NewIterator(DefaultIteratorOptions)
+	defer it.Close()
+	for it.Rewind(); it.Valid(); it.Next() {
+		val, err := it.Value()
+		if err != nil {
+			return err
+		}
+		if !fn(it.Key(), val) {
+			break
+		}
 	}
 	return nil
 }
