@@ -16,9 +16,19 @@ type Options struct {
 	IndexType    IndexerType
 }
 
+type IteratorOptions struct {
+	Prefix  []byte
+	Reverse bool
+}
+
 var DefaultOptions = &Options{
 	DirPath:      os.TempDir(),
 	DataFileSize: 256 * 1024 * 1024, // 256MB
 	SyncWrites:   false,
 	IndexType:    IndexBTree,
+}
+
+var DefaultIteratorOptions = IteratorOptions{
+	Prefix:  nil,
+	Reverse: false,
 }
