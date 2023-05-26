@@ -1,8 +1,6 @@
 package index
 
 import (
-	"bytes"
-	"github.com/google/btree"
 	"yojoudb/data"
 )
 
@@ -35,13 +33,4 @@ func NewIndexer(indexType IndexType) Indexer {
 	default:
 		panic("unsupported index type")
 	}
-}
-
-type Item struct {
-	key K
-	loc Loc
-}
-
-func (i *Item) Less(bi btree.Item) bool {
-	return bytes.Compare(i.key, bi.(*Item).key) == -1
 }

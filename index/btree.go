@@ -1,6 +1,7 @@
 package index
 
 import (
+	"bytes"
 	"github.com/google/btree"
 	"sync"
 )
@@ -12,6 +13,15 @@ const (
 type BTree struct {
 	tree *btree.BTree
 	mu   *sync.RWMutex
+}
+
+type Item struct {
+	key K
+	loc Loc
+}
+
+func (i *Item) Less(bi btree.Item) bool {
+	return bytes.Compare(i.key, bi.(*Item).key) == -1
 }
 
 func NewBTree() *BTree {
