@@ -2,12 +2,12 @@ package yojoudb
 
 import (
 	"bytes"
-	"yojoudb/index"
+	"yojoudb/meta"
 )
 
 type Iterator struct {
 	options   IteratorOptions
-	IndexIter index.Iterator
+	IndexIter meta.Iterator
 	db        *DB
 }
 

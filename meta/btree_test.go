@@ -1,4 +1,4 @@
-package index
+package meta
 
 import (
 	"github.com/stretchr/testify/assert"

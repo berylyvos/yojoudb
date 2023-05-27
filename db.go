@@ -8,14 +8,14 @@ import (
 	"strings"
 	"sync"
 	"yojoudb/data"
-	"yojoudb/index"
+	"yojoudb/meta"
 )
 
 // DB database instance
 type DB struct {
 	activeFile *data.DataFile            // append & read
 	olderFiles map[uint32]*data.DataFile // read-only
-	index      index.Indexer
+	index      meta.Indexer
 	fileIds    []int // for loading index
 	options    *Options
 	mu         *sync.RWMutex
@@ -49,7 +49,7 @@ func Open(options *Options) (*DB, error) {
 		mu:         new(sync.RWMutex),
 		options:    options,
 		olderFiles: make(map[uint32]*data.DataFile),
-		index:      index.NewIndexer(options.IndexType),
+		index:      meta.NewIndexer(options.IndexType),
 	}
 
 	// load data files
