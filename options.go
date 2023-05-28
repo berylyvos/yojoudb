@@ -1,19 +1,15 @@
 package yojoudb
 
-import "os"
-
-type IndexerType = uint8
-
-const (
-	IndexBTree IndexerType = iota
-	IndexART
+import (
+	"os"
+	"yojoudb/meta"
 )
 
 type Options struct {
 	DirPath      string
 	DataFileSize int64
 	SyncWrites   bool
-	IndexType    IndexerType
+	IndexType    meta.IndexType
 }
 
 type IteratorOptions struct {
@@ -25,7 +21,7 @@ var DefaultOptions = &Options{
 	DirPath:      os.TempDir(),
 	DataFileSize: 256 * 1024 * 1024, // 256MB
 	SyncWrites:   false,
-	IndexType:    IndexBTree,
+	IndexType:    meta.IndexART,
 }
 
 var DefaultIteratorOptions = IteratorOptions{

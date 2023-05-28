@@ -32,7 +32,7 @@ func NewIndexer(indexType IndexType) Indexer {
 	case IndexBTree:
 		return NewBTree()
 	case IndexART:
-		return nil
+		return NewART()
 	default:
 		panic("unsupported index type")
 	}
