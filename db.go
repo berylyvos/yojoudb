@@ -112,9 +112,7 @@ func (db *DB) Put(key K, val V) error {
 	}
 
 	// update index
-	if ok := db.index.Put(key, loc); !ok {
-		return ErrIndexUpdateFailed
-	}
+	_ = db.index.Put(key, loc)
 
 	return nil
 }
@@ -159,7 +157,7 @@ func (db *DB) Delete(key K) error {
 		return err
 	}
 
-	ok := db.index.Delete(key)
+	_, ok := db.index.Delete(key)
 	if !ok {
 		return ErrIndexUpdateFailed
 	}
@@ -349,15 +347,15 @@ func (db *DB) loadIndexer() error {
 				Fid:    fileId,
 				Offset: offset,
 			}
-			var ok bool
+			//var ok bool
 			if lr.Type == data.LRDeleted {
-				ok = db.index.Delete(lr.Key)
+				_, _ = db.index.Delete(lr.Key)
 			} else {
-				ok = db.index.Put(lr.Key, loc)
+				_ = db.index.Put(lr.Key, loc)
 			}
-			if !ok {
-				return ErrIndexUpdateFailed
-			}
+			//if !ok {
+			//	return ErrIndexUpdateFailed
+			//}
 
 			offset += sz
 		}

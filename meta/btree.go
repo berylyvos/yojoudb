@@ -32,7 +32,7 @@ func NewBTree() *BTree {
 	}
 }
 
-func (bt *BTree) Put(key K, loc Loc) bool {
+func (bt *BTree) Put(key K, loc Loc) Loc {
 	item := &Item{
 		key: key,
 		loc: loc,
@@ -40,8 +40,11 @@ func (bt *BTree) Put(key K, loc Loc) bool {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 
-	bt.tree.ReplaceOrInsert(item)
-	return true
+	oldItem := bt.tree.ReplaceOrInsert(item)
+	if oldItem == nil {
+		return nil
+	}
+	return oldItem.(*Item).loc
 }
 
 func (bt *BTree) Get(key K) Loc {
@@ -54,17 +57,18 @@ func (bt *BTree) Get(key K) Loc {
 	return nil
 }
 
-func (bt *BTree) Delete(key K) bool {
+func (bt *BTree) Delete(key K) (Loc, bool) {
 	item := &Item{
 		key: key,
 	}
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 
-	if old := bt.tree.Delete(item); old == nil {
-		return false
+	oldItem := bt.tree.Delete(item)
+	if oldItem == nil {
+		return nil, false
 	}
-	return true
+	return oldItem.(*Item).loc, true
 }
 
 func (bt *BTree) Size() int {
@@ -78,6 +82,10 @@ func (bt *BTree) Iterator(reverse bool) Iterator {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return newBtreeIterator(bt.tree, reverse)
+}
+
+func (bt *BTree) Close() error {
+	return nil
 }
 
 type btreeIterator struct {
