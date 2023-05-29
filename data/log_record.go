@@ -10,13 +10,14 @@ type LRType = byte
 const (
 	LRNormal LRType = iota
 	LRDeleted
+	LRTxFin
 )
 
 // crc type keySize valSize
 // 4   1    5       5 (varInt32)
 const maxLogRecordHeaderSize = 0xf
 
-// LogRecord a record in a file
+// LogRecord log record in a file
 type LogRecord struct {
 	Key  []byte
 	Val  []byte
@@ -35,6 +36,12 @@ type LRHeader struct {
 type LRLoc struct {
 	Fid    uint32
 	Offset int64
+}
+
+// TxRecord transaction log record and it's location
+type TxRecord struct {
+	Lr  *LogRecord
+	Loc *LRLoc
 }
 
 // Encode encodes LogRecord into bytes and returns the number of bytes encoded.

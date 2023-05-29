@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"yojoudb/data"
 	"yojoudb/meta"
 )
@@ -18,6 +19,7 @@ type DB struct {
 	index      meta.Indexer
 	fileIds    []int // for loading index
 	options    *Options
+	seqNo      uint64
 	mu         *sync.RWMutex
 }
 
@@ -29,6 +31,9 @@ type V = []byte
 
 // LR alias for data.LogRecord
 type LR = data.LogRecord
+
+// TxR alias for data.TxRecord
+type TxR = data.TxRecord
 
 // Loc alias for data.LRLoc
 type Loc = data.LRLoc
@@ -63,6 +68,11 @@ func Open(options *Options) (*DB, error) {
 	}
 
 	return db, nil
+}
+
+// SeqNoIncr increases db.seqNo by one
+func (db *DB) SeqNoIncr() uint64 {
+	return atomic.AddUint64(&db.seqNo, 1)
 }
 
 // Close closes the db instance. Closes active file and old files.
@@ -101,12 +111,12 @@ func (db *DB) Put(key K, val V) error {
 	}
 
 	lr := &LR{
-		Key:  key,
+		Key:  spliceSeqNoAndKey(key, nonTxSeqNo),
 		Val:  val,
 		Type: data.LRNormal,
 	}
 
-	loc, err := db.appendLogRecord(lr)
+	loc, err := db.appendLogRecordWithLock(lr)
 	if err != nil {
 		return err
 	}
@@ -148,11 +158,11 @@ func (db *DB) Delete(key K) error {
 	}
 
 	lr := &LR{
-		Key:  key,
+		Key:  spliceSeqNoAndKey(key, nonTxSeqNo),
 		Type: data.LRDeleted,
 	}
 
-	_, err := db.appendLogRecord(lr)
+	_, err := db.appendLogRecordWithLock(lr)
 	if err != nil {
 		return err
 	}
@@ -219,11 +229,14 @@ func (db *DB) retrievalByLoc(loc *Loc) (V, error) {
 	return lr.Val, nil
 }
 
-// appendLogRecord appends log record to active file
-func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
+func (db *DB) appendLogRecordWithLock(lr *LR) (*Loc, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	return db.appendLogRecord(lr)
+}
 
+// appendLogRecord appends log record to active file
+func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
 	if db.activeFile == nil {
 		if err := db.setActiveDataFile(); err != nil {
 			return nil, err
@@ -324,6 +337,18 @@ func (db *DB) loadIndexer() error {
 		return nil
 	}
 
+	updateIndex := func(key K, typ data.LRType, loc *Loc) {
+		if typ == data.LRDeleted {
+			_, _ = db.index.Delete(key)
+		} else if typ == data.LRNormal {
+			_ = db.index.Put(key, loc)
+		}
+	}
+
+	// cache for tx records
+	txRecords := make(map[uint64][]*TxR)
+	var curSeqNo = nonTxSeqNo
+
 	for _, fid := range db.fileIds {
 		var df *data.DataFile
 		fileId := uint32(fid)
@@ -333,6 +358,7 @@ func (db *DB) loadIndexer() error {
 			df = db.olderFiles[fileId]
 		}
 
+		// read log record one by one
 		var offset int64 = 0
 		for {
 			lr, sz, err := df.ReadLogRecord(offset)
@@ -347,15 +373,29 @@ func (db *DB) loadIndexer() error {
 				Fid:    fileId,
 				Offset: offset,
 			}
-			//var ok bool
-			if lr.Type == data.LRDeleted {
-				_, _ = db.index.Delete(lr.Key)
-			} else {
-				_ = db.index.Put(lr.Key, loc)
+
+			key, seqNo := splitSeqNoAndKey(lr.Key)
+			if seqNo == nonTxSeqNo {
+				updateIndex(key, lr.Type, loc)
+			} else { // handle Tx records
+				if lr.Type == data.LRTxFin {
+					for _, tr := range txRecords[seqNo] {
+						updateIndex(tr.Lr.Key, tr.Lr.Type, tr.Loc)
+					}
+					delete(txRecords, seqNo)
+				} else {
+					lr.Key = key
+					txr := &TxR{
+						Lr:  lr,
+						Loc: loc,
+					}
+					txRecords[seqNo] = append(txRecords[seqNo], txr)
+				}
 			}
-			//if !ok {
-			//	return ErrIndexUpdateFailed
-			//}
+
+			if seqNo > curSeqNo {
+				curSeqNo = seqNo
+			}
 
 			offset += sz
 		}
@@ -365,6 +405,8 @@ func (db *DB) loadIndexer() error {
 			db.activeFile.WriteOff = offset
 		}
 	}
+
+	db.seqNo = curSeqNo
 
 	return nil
 }
