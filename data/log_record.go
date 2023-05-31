@@ -69,8 +69,27 @@ func Encode(lr *LogRecord) ([]byte, int64) {
 	return b, int64(n)
 }
 
+func EncodeLRLoc(loc *LRLoc) []byte {
+	b := make([]byte, binary.MaxVarintLen32+binary.MaxVarintLen64)
+	var idx = 0
+	idx += binary.PutVarint(b[idx:], int64(loc.Fid))
+	idx += binary.PutVarint(b[idx:], loc.Offset)
+	return b[:idx]
+}
+
+func DecodeLRLoc(b []byte) *LRLoc {
+	idx := 0
+	fid, n := binary.Varint(b[idx:])
+	idx += n
+	offset, n := binary.Varint(b[idx:])
+	return &LRLoc{
+		Fid:    uint32(fid),
+		Offset: offset,
+	}
+}
+
 func decodeLRHeader(b []byte) (*LRHeader, int64) {
-	if len(b) <= 4 {
+	if len(b) <= CRC32Size {
 		return nil, 0
 	}
 

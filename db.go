@@ -3,6 +3,7 @@ package yojoudb
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ type DB struct {
 	fileIds    []int // for loading index
 	options    *Options
 	seqNo      uint64
+	isMerging  bool
 	mu         *sync.RWMutex
 }
 
@@ -57,12 +59,22 @@ func Open(options *Options) (*DB, error) {
 		index:      meta.NewIndexer(options.IndexType),
 	}
 
+	// load merged files
+	if err := db.loadMergedFiles(); err != nil {
+		return nil, err
+	}
+
 	// load data files
 	if err := db.loadDataFiles(); err != nil {
 		return nil, err
 	}
 
-	// load indexer
+	// load indexer from hint file
+	if err := db.loadIndexerFromHint(); err != nil {
+		return nil, err
+	}
+
+	// load indexer from data files
 	if err := db.loadIndexer(); err != nil {
 		return nil, err
 	}
@@ -337,6 +349,18 @@ func (db *DB) loadIndexer() error {
 		return nil
 	}
 
+	// check if merged, get the not-merged-fid
+	hasMerged, notMergedFid := false, uint32(0)
+	mergeFinFileName := filepath.Join(db.options.DirPath, data.MergeFinFileName)
+	if _, err := os.Stat(mergeFinFileName); err == nil {
+		fid, err := db.getNotMergedFileId(db.options.DirPath)
+		if err != nil {
+			return err
+		}
+		hasMerged = true
+		notMergedFid = fid
+	}
+
 	updateIndex := func(key K, typ data.LRType, loc *Loc) {
 		if typ == data.LRDeleted {
 			_, _ = db.index.Delete(key)
@@ -350,8 +374,15 @@ func (db *DB) loadIndexer() error {
 	var curSeqNo = nonTxSeqNo
 
 	for _, fid := range db.fileIds {
-		var df *data.DataFile
 		fileId := uint32(fid)
+
+		// fid < not-merged-fid, meaning that the file is merged
+		// and the index has been loaded from hint file
+		if hasMerged && fileId < notMergedFid {
+			continue
+		}
+
+		var df *data.DataFile
 		if fileId == db.activeFile.FileId {
 			df = db.activeFile
 		} else {

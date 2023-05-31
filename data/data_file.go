@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	CRC32Size      = 4
-	DataFileSuffix = ".ddd"
+	CRC32Size        = 4
+	DataFileSuffix   = ".ddd"
+	HintFileName     = "hint"
+	MergeFinFileName = "merge-fin"
 )
 
 var (
@@ -28,19 +30,29 @@ func OpenDataFile(dir string, fid uint32) (*DataFile, error) {
 	return newDataFile(fileName, fid)
 }
 
+func OpenHintFile(dirPath string) (*DataFile, error) {
+	fileName := filepath.Join(dirPath, HintFileName)
+	return newDataFile(fileName, 0)
+}
+
+func OpenMergeFinFile(dirPath string) (*DataFile, error) {
+	fileName := filepath.Join(dirPath, MergeFinFileName)
+	return newDataFile(fileName, 0)
+}
+
 func GetDataFileName(dir string, fid uint32) string {
 	return filepath.Join(dir, fmt.Sprintf("%09d", fid)+DataFileSuffix)
 }
 
 func newDataFile(dir string, fid uint32) (*DataFile, error) {
-	fileIO, err := fio.NewIOManager(dir)
+	iom, err := fio.NewIOManager(dir)
 	if err != nil {
 		return nil, err
 	}
 	return &DataFile{
 		FileId:    fid,
 		WriteOff:  0,
-		IoManager: fileIO,
+		IoManager: iom,
 	}, nil
 }
 
@@ -102,6 +114,15 @@ func (df *DataFile) Write(b []byte) error {
 	}
 	df.WriteOff += int64(n)
 	return nil
+}
+
+func (df *DataFile) WriteHintRecord(key []byte, loc *LRLoc) error {
+	lr := &LogRecord{
+		Key: key,
+		Val: EncodeLRLoc(loc),
+	}
+	encRecord, _ := Encode(lr)
+	return df.Write(encRecord)
 }
 
 func (df *DataFile) Sync() error {
