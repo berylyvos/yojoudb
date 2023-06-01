@@ -1,6 +1,8 @@
 package yojoudb
 
 import (
+	"fmt"
+	"github.com/gofrs/flock"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,6 +15,10 @@ import (
 	"yojoudb/meta"
 )
 
+const (
+	fileLockName = "flock"
+)
+
 // DB database instance
 type DB struct {
 	activeFile *data.DataFile            // append & read
@@ -22,6 +28,7 @@ type DB struct {
 	options    *Options
 	seqNo      uint64
 	isMerging  bool
+	fileLock   *flock.Flock // file lock for single process
 	mu         *sync.RWMutex
 }
 
@@ -52,11 +59,22 @@ func Open(options *Options) (*DB, error) {
 		}
 	}
 
+	// check if there's another process get the file lock
+	fileLock := flock.New(filepath.Join(options.DirPath, fileLockName))
+	hold, err := fileLock.TryLock()
+	if err != nil {
+		return nil, err
+	}
+	if !hold {
+		return nil, ErrDatabaseIsUsing
+	}
+
 	db := &DB{
 		mu:         new(sync.RWMutex),
 		options:    options,
 		olderFiles: make(map[uint32]*data.DataFile),
 		index:      meta.NewIndexer(options.IndexType, options.DirPath, options.SyncWrites),
+		fileLock:   fileLock,
 	}
 
 	// load merged files
@@ -92,6 +110,12 @@ func (db *DB) SeqNoIncr() uint64 {
 
 // Close closes the db instance. Closes active file and old files.
 func (db *DB) Close() error {
+	defer func() {
+		if err := db.fileLock.Unlock(); err != nil {
+			panic(fmt.Sprintf("failed to unlock the directory, %v", err))
+		}
+	}()
+
 	if db.activeFile == nil {
 		return nil
 	}
