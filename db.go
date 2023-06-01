@@ -56,7 +56,7 @@ func Open(options *Options) (*DB, error) {
 		mu:         new(sync.RWMutex),
 		options:    options,
 		olderFiles: make(map[uint32]*data.DataFile),
-		index:      meta.NewIndexer(options.IndexType),
+		index:      meta.NewIndexer(options.IndexType, options.DirPath, options.SyncWrites),
 	}
 
 	// load merged files
@@ -69,14 +69,17 @@ func Open(options *Options) (*DB, error) {
 		return nil, err
 	}
 
-	// load indexer from hint file
-	if err := db.loadIndexerFromHint(); err != nil {
-		return nil, err
-	}
+	// load indexer if not using b+tree
+	if options.IndexType != meta.IndexBPT {
+		// load indexer from hint file
+		if err := db.loadIndexerFromHint(); err != nil {
+			return nil, err
+		}
 
-	// load indexer from data files
-	if err := db.loadIndexer(); err != nil {
-		return nil, err
+		// load indexer from data files
+		if err := db.loadIndexer(); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil
