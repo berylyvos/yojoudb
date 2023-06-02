@@ -4,6 +4,13 @@ const (
 	DataFilePerm = 0644
 )
 
+type FileIOType = byte
+
+const (
+	IOStdFile FileIOType = iota
+	IOMMap
+)
+
 // IOManager abstract file IO manager
 type IOManager interface {
 	// Read reads data by the given location of a file
@@ -22,6 +29,13 @@ type IOManager interface {
 	Size() (int64, error)
 }
 
-func NewIOManager(fileName string) (IOManager, error) {
-	return NewFileIOManager(fileName)
+func NewIOManager(fileName string, ioType FileIOType) (IOManager, error) {
+	switch ioType {
+	case IOStdFile:
+		return NewFileIOManager(fileName)
+	case IOMMap:
+		return NewMMapIOManager(fileName)
+	default:
+		panic("unsupported io type")
+	}
 }

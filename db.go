@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"yojoudb/data"
+	"yojoudb/fio"
 	"yojoudb/meta"
 )
 
@@ -97,6 +98,11 @@ func Open(options *Options) (*DB, error) {
 
 		// load indexer from data files
 		if err := db.loadIndexer(); err != nil {
+			return nil, err
+		}
+
+		// reset i/o type to std file
+		if err := db.resetIOType(); err != nil {
 			return nil, err
 		}
 	}
@@ -337,7 +343,7 @@ func (db *DB) setActiveDataFile() error {
 	if db.activeFile != nil {
 		fid = db.activeFile.FileId + 1
 	}
-	df, err := data.OpenDataFile(db.options.DirPath, fid)
+	df, err := data.OpenDataFile(db.options.DirPath, fid, fio.IOStdFile)
 	if err != nil {
 		return err
 	}
@@ -365,7 +371,8 @@ func (db *DB) loadDataFiles() error {
 	// sort file ids and open every file, the last one is active
 	sort.Ints(fileIds)
 	for i, fid := range fileIds {
-		df, err := data.OpenDataFile(db.options.DirPath, uint32(fid))
+		// we use mmap to map data file to memory when launching db
+		df, err := data.OpenDataFile(db.options.DirPath, uint32(fid), fio.IOMMap)
 		if err != nil {
 			return err
 		}
@@ -475,6 +482,22 @@ func (db *DB) loadIndexer() error {
 
 	db.seqNo = curSeqNo
 
+	return nil
+}
+
+func (db *DB) resetIOType() error {
+	if db.activeFile == nil {
+		return nil
+	}
+
+	if err := db.activeFile.SetIOManager(db.options.DirPath, fio.IOStdFile); err != nil {
+		return err
+	}
+	for _, df := range db.olderFiles {
+		if err := df.SetIOManager(db.options.DirPath, fio.IOStdFile); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

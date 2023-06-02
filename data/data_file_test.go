@@ -3,6 +3,7 @@ package data
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"yojoudb/fio"
 )
 
 const (
@@ -10,21 +11,21 @@ const (
 )
 
 func TestOpenDataFile(t *testing.T) {
-	dataFile1, err := OpenDataFile(dir, 0)
+	dataFile1, err := OpenDataFile(dir, 0, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile1)
 
-	dataFile2, err := OpenDataFile(dir, 1)
+	dataFile2, err := OpenDataFile(dir, 1, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile2)
 
-	dataFile3, err := OpenDataFile(dir, 1)
+	dataFile3, err := OpenDataFile(dir, 1, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile3)
 }
 
 func TestDataFile_Write(t *testing.T) {
-	dataFile, err := OpenDataFile(dir, 114514)
+	dataFile, err := OpenDataFile(dir, 114514, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile)
 
@@ -39,7 +40,7 @@ func TestDataFile_Write(t *testing.T) {
 }
 
 func TestDataFile_Close(t *testing.T) {
-	dataFile, err := OpenDataFile(dir, 0)
+	dataFile, err := OpenDataFile(dir, 0, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile)
 
@@ -48,7 +49,7 @@ func TestDataFile_Close(t *testing.T) {
 }
 
 func TestDataFile_Sync(t *testing.T) {
-	dataFile, err := OpenDataFile(dir, 0)
+	dataFile, err := OpenDataFile(dir, 0, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile)
 
@@ -57,7 +58,7 @@ func TestDataFile_Sync(t *testing.T) {
 }
 
 func TestDataFile_ReadLogRecord(t *testing.T) {
-	dataFile, err := OpenDataFile(dir, 1)
+	dataFile, err := OpenDataFile(dir, 1, fio.IOStdFile)
 	assert.Nil(t, err)
 	assert.NotNil(t, dataFile)
 
