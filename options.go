@@ -9,6 +9,7 @@ type Options struct {
 	DirPath      string
 	DataFileSize int64
 	SyncWrites   bool
+	BytesPerSync uint
 	IndexType    meta.IndexType
 }
 
@@ -26,6 +27,7 @@ var DefaultOptions = &Options{
 	DirPath:      os.TempDir(),
 	DataFileSize: 256 * 1024 * 1024, // 256MB
 	SyncWrites:   false,
+	BytesPerSync: 0,
 	IndexType:    meta.IndexART,
 }
 

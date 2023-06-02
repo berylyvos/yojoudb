@@ -29,6 +29,7 @@ type DB struct {
 	seqNo      uint64
 	isMerging  bool
 	fileLock   *flock.Flock // file lock for single process
+	bytesWrite uint
 	mu         *sync.RWMutex
 }
 
@@ -307,10 +308,18 @@ func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
 		return nil, err
 	}
 
-	// if SyncWrites open, sync after every write
-	if db.options.SyncWrites {
+	// handle sync after write
+	db.bytesWrite += uint(sz)
+	var needSync = db.options.SyncWrites
+	if !needSync && db.options.BytesPerSync > 0 && db.bytesWrite >= db.options.BytesPerSync {
+		needSync = true
+	}
+	if needSync {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
+		}
+		if db.bytesWrite > 0 {
+			db.bytesWrite = 0
 		}
 	}
 
