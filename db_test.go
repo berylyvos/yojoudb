@@ -269,6 +269,33 @@ func TestDB_FileLock(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestDB_Stat(t *testing.T) {
+	opts := DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-test-stat")
+	opts.DirPath = dir
+	db, err := Open(opts)
+	defer destroyDB(db)
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	for i := 100; i < 10000; i++ {
+		err := db.Put(utils.TestKey(i), utils.RandValue(128))
+		assert.Nil(t, err)
+	}
+	for i := 100; i < 1000; i++ {
+		err := db.Delete(utils.TestKey(i))
+		assert.Nil(t, err)
+	}
+	for i := 2000; i < 5000; i++ {
+		err := db.Put(utils.TestKey(i), utils.RandValue(128))
+		assert.Nil(t, err)
+	}
+
+	stat := db.Stat()
+	assert.NotNil(t, stat)
+	t.Logf("%+v", stat)
+}
+
 func destroyDB(db *DB) {
 	if db != nil {
 		if db.activeFile != nil {

@@ -14,6 +14,7 @@ import (
 	"yojoudb/data"
 	"yojoudb/fio"
 	"yojoudb/meta"
+	"yojoudb/utils"
 )
 
 const (
@@ -33,6 +34,13 @@ type DB struct {
 	fileLock    *flock.Flock // file lock for single process
 	bytesWrite  uint
 	reclaimSize int64
+}
+
+type Stat struct {
+	KeyNum          uint
+	DataFileNum     uint
+	ReclaimableSize int64
+	DiskSize        int64
 }
 
 // K key alias for []byte
@@ -114,6 +122,27 @@ func Open(options *Options) (*DB, error) {
 // SeqNoIncr increases db.seqNo by one
 func (db *DB) SeqNoIncr() uint64 {
 	return atomic.AddUint64(&db.seqNo, 1)
+}
+
+func (db *DB) Stat() *Stat {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	var dataFiles = uint(len(db.olderFiles))
+	if db.activeFile != nil {
+		dataFiles += 1
+	}
+
+	dirSize, err := utils.DirSize(db.options.DirPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to get dir size : %v", err))
+	}
+	return &Stat{
+		KeyNum:          uint(db.index.Size()),
+		DataFileNum:     dataFiles,
+		ReclaimableSize: db.reclaimSize,
+		DiskSize:        dirSize,
+	}
 }
 
 // Close closes the db instance. Closes active file and old files.
@@ -340,6 +369,7 @@ func (db *DB) appendLogRecord(lr *LR) (*Loc, error) {
 	return &Loc{
 		Fid:    db.activeFile.FileId,
 		Offset: writeOff,
+		Size:   uint32(sz),
 	}, nil
 }
 
@@ -520,6 +550,9 @@ func checkOptions(options *Options) error {
 	}
 	if options.DataFileSize <= 0 {
 		return ErrDataFileSizeNotPositive
+	}
+	if options.MergeRatio <= 0 || options.MergeRatio > 1 {
+		return ErrInvalidMergeRatio
 	}
 	return nil
 }

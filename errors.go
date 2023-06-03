@@ -13,4 +13,7 @@ var (
 	ErrDirPathIsEmpty          = errors.New("database dir path is empty")
 	ErrDataFileSizeNotPositive = errors.New("database data file size must be greater than 0")
 	ErrDatabaseIsUsing         = errors.New("the database directory is used by another process")
+	ErrInvalidMergeRatio       = errors.New("invalid merge ratio, must between 0 and 1")
+	ErrMergeRatioUnreached     = errors.New("the merge ratio do not reach the option")
+	ErrNoEnoughSpaceForMerge   = errors.New("no enough disk space for merge")
 )

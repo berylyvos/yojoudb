@@ -11,6 +11,7 @@ type Options struct {
 	SyncWrites   bool
 	BytesPerSync uint
 	IndexType    meta.IndexType
+	MergeRatio   float32
 }
 
 type IteratorOptions struct {
@@ -29,6 +30,7 @@ var DefaultOptions = &Options{
 	SyncWrites:   false,
 	BytesPerSync: 0,
 	IndexType:    meta.IndexART,
+	MergeRatio:   0.5,
 }
 
 var DefaultIteratorOptions = IteratorOptions{
