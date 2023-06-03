@@ -35,6 +35,7 @@ type LRHeader struct {
 // LRLoc location of the log record on the disk
 type LRLoc struct {
 	Fid    uint32
+	Size   uint32
 	Offset int64
 }
 
@@ -70,10 +71,11 @@ func Encode(lr *LogRecord) ([]byte, int64) {
 }
 
 func EncodeLRLoc(loc *LRLoc) []byte {
-	b := make([]byte, binary.MaxVarintLen32+binary.MaxVarintLen64)
+	b := make([]byte, 2*binary.MaxVarintLen32+binary.MaxVarintLen64)
 	var idx = 0
 	idx += binary.PutVarint(b[idx:], int64(loc.Fid))
 	idx += binary.PutVarint(b[idx:], loc.Offset)
+	idx += binary.PutVarint(b[idx:], int64(loc.Size))
 	return b[:idx]
 }
 
@@ -82,9 +84,12 @@ func DecodeLRLoc(b []byte) *LRLoc {
 	fid, n := binary.Varint(b[idx:])
 	idx += n
 	offset, n := binary.Varint(b[idx:])
+	idx += n
+	sz, _ := binary.Varint(b[idx:])
 	return &LRLoc{
 		Fid:    uint32(fid),
 		Offset: offset,
+		Size:   uint32(sz),
 	}
 }
 

@@ -22,16 +22,17 @@ const (
 
 // DB database instance
 type DB struct {
-	activeFile *data.DataFile            // append & read
-	olderFiles map[uint32]*data.DataFile // read-only
-	index      meta.Indexer
-	fileIds    []int // for loading index
-	options    *Options
-	seqNo      uint64
-	isMerging  bool
-	fileLock   *flock.Flock // file lock for single process
-	bytesWrite uint
-	mu         *sync.RWMutex
+	mu          *sync.RWMutex
+	activeFile  *data.DataFile            // append & read
+	olderFiles  map[uint32]*data.DataFile // read-only
+	index       meta.Indexer
+	fileIds     []int // for loading index
+	options     *Options
+	seqNo       uint64
+	isMerging   bool
+	fileLock    *flock.Flock // file lock for single process
+	bytesWrite  uint
+	reclaimSize int64
 }
 
 // K key alias for []byte
@@ -168,7 +169,9 @@ func (db *DB) Put(key K, val V) error {
 	}
 
 	// update index
-	_ = db.index.Put(key, loc)
+	if oldVal := db.index.Put(key, loc); oldVal != nil {
+		db.reclaimSize += int64(oldVal.Size)
+	}
 
 	return nil
 }
@@ -208,14 +211,18 @@ func (db *DB) Delete(key K) error {
 		Type: data.LRDeleted,
 	}
 
-	_, err := db.appendLogRecordWithLock(lr)
+	loc, err := db.appendLogRecordWithLock(lr)
 	if err != nil {
 		return err
 	}
+	db.reclaimSize += int64(loc.Size)
 
-	_, ok := db.index.Delete(key)
+	oldVal, ok := db.index.Delete(key)
 	if !ok {
 		return ErrIndexUpdateFailed
+	}
+	if oldVal != nil {
+		db.reclaimSize += int64(oldVal.Size)
 	}
 	return nil
 }
@@ -405,10 +412,15 @@ func (db *DB) loadIndexer() error {
 	}
 
 	updateIndex := func(key K, typ data.LRType, loc *Loc) {
+		var oldVal *Loc
 		if typ == data.LRDeleted {
-			_, _ = db.index.Delete(key)
+			oldVal, _ = db.index.Delete(key)
+			db.reclaimSize += int64(loc.Size)
 		} else if typ == data.LRNormal {
-			_ = db.index.Put(key, loc)
+			oldVal = db.index.Put(key, loc)
+		}
+		if oldVal != nil {
+			db.reclaimSize += int64(oldVal.Size)
 		}
 	}
 
@@ -446,6 +458,7 @@ func (db *DB) loadIndexer() error {
 			loc := &Loc{
 				Fid:    fileId,
 				Offset: offset,
+				Size:   uint32(sz),
 			}
 
 			key, seqNo := splitSeqNoAndKey(lr.Key)
