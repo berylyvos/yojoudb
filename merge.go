@@ -89,10 +89,10 @@ func (db *DB) Merge() error {
 	}
 
 	// open a temp merge DB instance
-	mergeOptions := db.options
+	mergeOptions := *db.options
 	mergeOptions.DirPath = mergePath
 	mergeOptions.SyncWrites = false
-	mergeDB, err := Open(mergeOptions)
+	mergeDB, err := Open(&mergeOptions)
 	if err != nil {
 		return err
 	}
@@ -161,8 +161,7 @@ func (db *DB) Merge() error {
 		return err
 	}
 
-	return nil
-
+	return mergeDB.Close()
 }
 
 func (db *DB) loadMergedFiles() error {
