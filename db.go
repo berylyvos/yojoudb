@@ -551,7 +551,7 @@ func checkOptions(options *Options) error {
 	if options.DataFileSize <= 0 {
 		return ErrDataFileSizeNotPositive
 	}
-	if options.MergeRatio <= 0 || options.MergeRatio > 1 {
+	if options.MergeRatio < 0 || options.MergeRatio > 1 {
 		return ErrInvalidMergeRatio
 	}
 	return nil
