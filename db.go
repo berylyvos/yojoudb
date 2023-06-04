@@ -556,3 +556,7 @@ func checkOptions(options *Options) error {
 	}
 	return nil
 }
+
+func (db *DB) GetDirPath() string {
+	return db.options.DirPath
+}
