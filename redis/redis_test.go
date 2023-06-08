@@ -14,6 +14,7 @@ func TestRedis_Del_Type(t *testing.T) {
 	dir, _ := os.MkdirTemp("", "yojoudb-redis-del-type")
 	opts.DirPath = dir
 	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
 	assert.Nil(t, err)
 
 	// del
@@ -40,6 +41,7 @@ func TestRedis_Set_Get(t *testing.T) {
 	dir, _ := os.MkdirTemp("", "yojoudb-redis-set-get")
 	opts.DirPath = dir
 	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
 	assert.Nil(t, err)
 
 	err = rds.Set(utils.TestKey(1), 0, utils.RandValue(100))
@@ -57,4 +59,14 @@ func TestRedis_Set_Get(t *testing.T) {
 
 	_, err = rds.Get(utils.TestKey(42))
 	assert.Equal(t, yojoudb.ErrKeyNotFound, err)
+}
+
+func destroyDB(db *yojoudb.DB) {
+	if db != nil {
+		_ = db.Close()
+		err := os.RemoveAll(db.GetDirPath())
+		if err != nil {
+			panic(err)
+		}
+	}
 }
