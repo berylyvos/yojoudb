@@ -61,6 +61,71 @@ func TestRedis_Set_Get(t *testing.T) {
 	assert.Equal(t, yojoudb.ErrKeyNotFound, err)
 }
 
+func TestRedis_HSet_HGet(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-hset-hget")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	ok1, err := rds.HSet(utils.TestKey(1), []byte("field1"), utils.RandValue(100))
+	assert.Nil(t, err)
+	assert.True(t, ok1)
+
+	v1 := utils.RandValue(100)
+	ok2, err := rds.HSet(utils.TestKey(1), []byte("field1"), v1)
+	assert.Nil(t, err)
+	assert.False(t, ok2)
+
+	v2 := utils.RandValue(100)
+	ok3, err := rds.HSet(utils.TestKey(1), []byte("field2"), v2)
+	assert.Nil(t, err)
+	assert.True(t, ok3)
+
+	val1, err := rds.HGet(utils.TestKey(1), []byte("field1"))
+	assert.Nil(t, err)
+	assert.Equal(t, v1, val1)
+
+	val2, err := rds.HGet(utils.TestKey(1), []byte("field2"))
+	assert.Nil(t, err)
+	assert.Equal(t, v2, val2)
+
+	_, err = rds.HGet(utils.TestKey(1), []byte("field-not-exist"))
+	assert.Equal(t, yojoudb.ErrKeyNotFound, err)
+}
+
+func TestRedisDataStructure_HDel(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-hdel")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	del1, err := rds.HDel(utils.TestKey(200), nil)
+	assert.Nil(t, err)
+	assert.False(t, del1)
+
+	ok1, err := rds.HSet(utils.TestKey(1), []byte("field1"), utils.RandValue(100))
+	assert.Nil(t, err)
+	assert.True(t, ok1)
+
+	v1 := utils.RandValue(100)
+	ok2, err := rds.HSet(utils.TestKey(1), []byte("field1"), v1)
+	assert.Nil(t, err)
+	assert.False(t, ok2)
+
+	v2 := utils.RandValue(100)
+	ok3, err := rds.HSet(utils.TestKey(1), []byte("field2"), v2)
+	assert.Nil(t, err)
+	assert.True(t, ok3)
+
+	del2, err := rds.HDel(utils.TestKey(1), []byte("field1"))
+	assert.Nil(t, err)
+	assert.True(t, del2)
+}
+
 func destroyDB(db *yojoudb.DB) {
 	if db != nil {
 		_ = db.Close()
