@@ -126,6 +126,68 @@ func TestRedisDataStructure_HDel(t *testing.T) {
 	assert.True(t, del2)
 }
 
+func TestRedis_SIsMember(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-sismember")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	ok, err := rds.SAdd(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+	ok, err = rds.SAdd(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+	ok, err = rds.SAdd(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	ok, err = rds.SIsMember(utils.TestKey(2), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+	ok, err = rds.SIsMember(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+	ok, err = rds.SIsMember(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+	ok, err = rds.SIsMember(utils.TestKey(1), []byte("val-not-exist"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+}
+
+func TestRedisDataStructure_SRem(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-srem")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	ok, err := rds.SAdd(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+	ok, err = rds.SAdd(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+	ok, err = rds.SAdd(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	ok, err = rds.SRem(utils.TestKey(2), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+	ok, err = rds.SRem(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	ok, err = rds.SIsMember(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+}
+
 func destroyDB(db *yojoudb.DB) {
 	if db != nil {
 		_ = db.Close()

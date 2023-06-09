@@ -25,7 +25,7 @@ func (hk *hashInternalKey) encode() []byte {
 	return buf
 }
 
-func getEncKey(key, field []byte, ver int64) []byte {
+func hashEncKey(key, field []byte, ver int64) []byte {
 	return (&hashInternalKey{
 		key:     key,
 		version: ver,
@@ -39,7 +39,7 @@ func (rc *RedisCmd) HSet(key, field, value []byte) (bool, error) {
 		return false, err
 	}
 
-	encKey := getEncKey(key, field, md.version)
+	encKey := hashEncKey(key, field, md.version)
 
 	var exist = true
 	if v, _ := rc.db.Get(encKey); v == nil {
@@ -68,7 +68,7 @@ func (rc *RedisCmd) HGet(key, field []byte) ([]byte, error) {
 		return nil, nil
 	}
 
-	encKey := getEncKey(key, field, md.version)
+	encKey := hashEncKey(key, field, md.version)
 
 	return rc.db.Get(encKey)
 }
@@ -82,7 +82,7 @@ func (rc *RedisCmd) HDel(key, field []byte) (bool, error) {
 		return false, nil
 	}
 
-	encKey := getEncKey(key, field, md.version)
+	encKey := hashEncKey(key, field, md.version)
 
 	var exist = true
 	if v, _ := rc.db.Get(encKey); v == nil {
