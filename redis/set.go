@@ -25,7 +25,7 @@ func (sk *setInternalKey) encode() []byte {
 	idx += ml
 
 	binary.LittleEndian.PutUint32(buf[idx:], uint32(ml))
-	return buf[:idx]
+	return buf
 }
 
 func setEncKey(key, member []byte, ver int64) []byte {
