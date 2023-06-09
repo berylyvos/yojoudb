@@ -95,7 +95,7 @@ func TestRedis_HSet_HGet(t *testing.T) {
 	assert.Equal(t, yojoudb.ErrKeyNotFound, err)
 }
 
-func TestRedisDataStructure_HDel(t *testing.T) {
+func TestRedis_HDel(t *testing.T) {
 	opts := yojoudb.DefaultOptions
 	dir, _ := os.MkdirTemp("", "yojoudb-redis-hdel")
 	opts.DirPath = dir
@@ -158,7 +158,7 @@ func TestRedis_SIsMember(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestRedisDataStructure_SRem(t *testing.T) {
+func TestRedis_SRem(t *testing.T) {
 	opts := yojoudb.DefaultOptions
 	dir, _ := os.MkdirTemp("", "yojoudb-redis-srem")
 	opts.DirPath = dir
@@ -186,6 +186,64 @@ func TestRedisDataStructure_SRem(t *testing.T) {
 	ok, err = rds.SIsMember(utils.TestKey(1), []byte("val-2"))
 	assert.Nil(t, err)
 	assert.False(t, ok)
+}
+
+func TestRedis_LPush_LPop(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-lpushlpop")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	res, err := rds.LPush(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), res)
+	res, err = rds.LPush(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(2), res)
+	res, err = rds.LPush(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(3), res)
+
+	val, err := rds.LPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
+	val, err = rds.LPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
+	val, err = rds.LPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
+}
+
+func TestRedis_RPop(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-rpushrpop")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	res, err := rds.RPush(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), res)
+	res, err = rds.RPush(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(2), res)
+	res, err = rds.RPush(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(3), res)
+
+	val, err := rds.RPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
+	val, err = rds.RPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
+	val, err = rds.RPop(utils.TestKey(1))
+	assert.Nil(t, err)
+	assert.NotNil(t, val)
 }
 
 func destroyDB(db *yojoudb.DB) {
