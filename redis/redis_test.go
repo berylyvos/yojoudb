@@ -246,6 +246,32 @@ func TestRedis_RPop(t *testing.T) {
 	assert.NotNil(t, val)
 }
 
+func TestRedis_ZAdd_ZScore(t *testing.T) {
+	opts := yojoudb.DefaultOptions
+	dir, _ := os.MkdirTemp("", "yojoudb-redis-zaddzscore")
+	opts.DirPath = dir
+	rds, err := NewRedisCmd(opts)
+	defer destroyDB(rds.db)
+	assert.Nil(t, err)
+
+	ok, err := rds.ZAdd(utils.TestKey(1), 111, []byte("val-1"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+	ok, err = rds.ZAdd(utils.TestKey(1), 222, []byte("val-1"))
+	assert.Nil(t, err)
+	assert.False(t, ok)
+	ok, err = rds.ZAdd(utils.TestKey(1), 42, []byte("val-2"))
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	score, err := rds.ZScore(utils.TestKey(1), []byte("val-1"))
+	assert.Nil(t, err)
+	assert.Equal(t, float64(222), score)
+	score, err = rds.ZScore(utils.TestKey(1), []byte("val-2"))
+	assert.Nil(t, err)
+	assert.Equal(t, float64(42), score)
+}
+
 func destroyDB(db *yojoudb.DB) {
 	if db != nil {
 		_ = db.Close()
