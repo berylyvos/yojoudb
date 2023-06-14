@@ -25,17 +25,14 @@ type IndexType = uint8
 const (
 	IndexBTree IndexType = iota
 	IndexART
-	IndexBPT
 )
 
-func NewIndexer(indexType IndexType, dirPath string, syncWrites bool) Indexer {
+func NewIndexer(indexType IndexType) Indexer {
 	switch indexType {
 	case IndexBTree:
 		return NewBTree()
 	case IndexART:
 		return NewART()
-	case IndexBPT:
-		return NewBPlusTree(dirPath, syncWrites)
 	default:
 		panic("unsupported index type")
 	}
