@@ -62,10 +62,6 @@ func (art *ART) Size() int {
 	return art.tree.Size()
 }
 
-func (art *ART) Close() error {
-	return nil
-}
-
 type artIterator struct {
 	curIndex int
 	reverse  bool
