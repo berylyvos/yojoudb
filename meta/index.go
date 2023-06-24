@@ -24,6 +24,7 @@ type IndexType = uint8
 const (
 	IndexBTree IndexType = iota
 	IndexART
+	IndexSKL
 )
 
 func NewIndexer(indexType IndexType) Indexer {
@@ -32,6 +33,8 @@ func NewIndexer(indexType IndexType) Indexer {
 		return NewBTree()
 	case IndexART:
 		return NewART()
+	case IndexSKL:
+		return NewSkiplist()
 	default:
 		panic("unsupported index type")
 	}
