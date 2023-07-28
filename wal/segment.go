@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"hash/crc32"
 	"io"
 	"os"
@@ -46,6 +47,7 @@ type segment struct {
 	curBlockIndex uint32
 	curBlockSize  uint32
 	closed        bool
+	cache         *lru.Cache[uint64, []byte]
 	header        []byte
 }
 
@@ -58,8 +60,8 @@ type ChunkLoc struct {
 	ChunkSize   uint32
 }
 
-// openSegmentFile opens a new segment file.
-func openSegmentFile(dirPath, extName string, id SegmentID) (*segment, error) {
+// openSegmentFile opens a segment file.
+func openSegmentFile(dirPath, extName string, id SegmentID, cache *lru.Cache[uint64, []byte]) (*segment, error) {
 	fd, err := os.OpenFile(
 		SegmentFileName(dirPath, extName, id),
 		os.O_CREATE|os.O_RDWR|os.O_APPEND,
@@ -80,6 +82,7 @@ func openSegmentFile(dirPath, extName string, id SegmentID) (*segment, error) {
 		curBlockIndex: uint32(offset / blockSize),
 		curBlockSize:  uint32(offset % blockSize),
 		header:        make([]byte, chunkHeaderSize),
+		cache:         cache,
 	}, nil
 }
 
@@ -220,6 +223,101 @@ func (s *segment) writeInternal(data []byte, chunkType ChunkType) error {
 	}
 
 	return nil
+}
+
+func (s *segment) Read(blockIndex uint32, chunkOffset int64) ([]byte, error) {
+	val, _, err := s.readInternal(blockIndex, chunkOffset)
+	return val, err
+}
+
+func (s *segment) readInternal(blockIndex uint32, chunkOffset int64) ([]byte, *ChunkLoc, error) {
+	if s.closed {
+		return nil, nil, ErrClosed
+	}
+
+	var (
+		res       []byte
+		segSize   = s.Size()
+		nextChunk = &ChunkLoc{SegId: s.id}
+	)
+	for {
+		sz := int64(blockSize)
+		offset := int64(blockIndex * blockSize)
+		// the block is not full, meaning that we've reached the last block
+		if offset+sz > segSize {
+			sz = segSize - offset
+		}
+
+		if chunkOffset >= sz {
+			return nil, nil, io.EOF
+		}
+
+		// read an entire block
+		var (
+			block []byte
+			ok    bool
+		)
+		if s.cache != nil {
+			block, ok = s.cache.Get(s.cacheKey(blockIndex))
+		}
+		// cache miss, read from file
+		if !ok || len(block) == 0 {
+			block = make([]byte, sz)
+			if _, err := s.fd.ReadAt(block, offset); err != nil {
+				return nil, nil, err
+			}
+			// cache the block, so that the next time it can be read from the cache.
+			// if the block size is smaller than blockSize, meaning the block is not full,
+			// so we will not cache it.
+			if s.cache != nil && sz == blockSize {
+				s.cache.Add(s.cacheKey(blockIndex), block)
+			}
+		}
+
+		// header
+		header := make([]byte, chunkHeaderSize)
+		copy(header, block[chunkOffset:chunkOffset+chunkHeaderSize])
+
+		// length
+		length := binary.LittleEndian.Uint16(header[4:6])
+
+		// copy data
+		start := chunkOffset + chunkHeaderSize
+		end := start + int64(length)
+		res = append(res, block[start:end]...)
+
+		// check sum
+		checksum := crc32.ChecksumIEEE(block[chunkOffset+4 : end])
+		savedSum := binary.LittleEndian.Uint32(header[:4])
+		if savedSum != checksum {
+			return nil, nil, ErrInvalidCRC
+		}
+
+		// type
+		chunkType := header[6]
+
+		// all chunks have been read
+		if chunkType == ChunkTypeFull || chunkType == ChunkTypeLast {
+			nextChunk.BlockIndex = blockIndex
+			nextChunk.ChunkOffset = end
+			// if this is the last chunk in the block, and the left is padding,
+			// the next chunk should be in the next block.
+			if end+chunkHeaderSize >= blockSize {
+				nextChunk.BlockIndex++
+				nextChunk.ChunkOffset = 0
+			}
+			break
+		}
+
+		blockIndex += 1
+		chunkOffset = 0
+	}
+
+	return res, nextChunk, nil
+}
+
+func (s *segment) cacheKey(blockIndex uint32) uint64 {
+	return uint64(s.id)<<32 | uint64(blockIndex)
 }
 
 // Encode encodes a ChunkLoc into bytes.
