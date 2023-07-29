@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"hash/crc32"
 	"io"
 	"os"
@@ -28,7 +27,7 @@ const (
 	chunkHeaderSize = 7
 
 	// 32 KB
-	blockSize = 32768
+	blockSize = 32 * KB
 
 	fileModePerm = 0644
 )
@@ -47,7 +46,7 @@ type segment struct {
 	curBlockIndex uint32
 	curBlockSize  uint32
 	closed        bool
-	cache         *lru.Cache[uint64, []byte]
+	cache         BlockCache
 	header        []byte
 }
 
@@ -70,7 +69,7 @@ type ChunkLoc struct {
 }
 
 // openSegmentFile opens a segment file.
-func openSegmentFile(dirPath, extName string, id SegmentID, cache *lru.Cache[uint64, []byte]) (*segment, error) {
+func openSegmentFile(dirPath, extName string, id SegmentID, cache BlockCache) (*segment, error) {
 	fd, err := os.OpenFile(
 		SegmentFileName(dirPath, extName, id),
 		os.O_CREATE|os.O_RDWR|os.O_APPEND,
