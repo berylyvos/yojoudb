@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	initialSegmentFileID = 1
+	initialSegmentID = 1
 )
 
 // BlockCache is alias for *lru.Cache[uint64, []byte].
@@ -91,7 +91,7 @@ func Open(opt Options) (*WAL, error) {
 	// empty dir, just initialize a new segment file
 	if len(segIds) == 0 {
 		seg, err := openSegmentFile(opt.DirPath, opt.SegmentFileExt,
-			initialSegmentFileID, wal.blockCache)
+			initialSegmentID, wal.blockCache)
 		if err != nil {
 			return nil, err
 		}
