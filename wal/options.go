@@ -44,10 +44,14 @@ const (
 	GB = 1024 * MB
 )
 
+const (
+	DotSEG = ".SEG"
+)
+
 var DefaultOptions = Options{
 	DirPath:        os.TempDir(),
 	SegmentSize:    GB,
-	SegmentFileExt: ".SEG",
+	SegmentFileExt: DotSEG,
 	BlockCacheSize: blockSize * 10,
 	Sync:           false,
 	BytesPerSync:   0,
