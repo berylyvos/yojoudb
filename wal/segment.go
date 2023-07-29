@@ -51,6 +51,15 @@ type segment struct {
 	header        []byte
 }
 
+// segmentReader is used to iterate all the data from segment file.
+// Call segmentReader.Next() to get the next chunk data,
+// and io.EOF will be returned when there is no data.
+type segmentReader struct {
+	seg      *segment
+	blockIdx uint32
+	chunkOff int64
+}
+
 // ChunkLoc represents the location of a chunk in a segment file.
 // Used to read the data from the segment file.
 type ChunkLoc struct {
@@ -89,6 +98,14 @@ func openSegmentFile(dirPath, extName string, id SegmentID, cache *lru.Cache[uin
 // SegmentFileName returns the file name of a segment file.
 func SegmentFileName(dirPath, extName string, id SegmentID) string {
 	return filepath.Join(dirPath, fmt.Sprintf("%09d"+extName, id))
+}
+
+func (s *segment) NewReader() *segmentReader {
+	return &segmentReader{
+		seg:      s,
+		blockIdx: 0,
+		chunkOff: 0,
+	}
 }
 
 func (s *segment) Sync() error {
@@ -318,6 +335,35 @@ func (s *segment) readInternal(blockIndex uint32, chunkOffset int64) ([]byte, *C
 
 func (s *segment) cacheKey(blockIndex uint32) uint64 {
 	return uint64(s.id)<<32 | uint64(blockIndex)
+}
+
+func (sr *segmentReader) Next() ([]byte, *ChunkLoc, error) {
+	if sr.seg.closed {
+		return nil, nil, ErrClosed
+	}
+
+	// current chunk
+	curChunk := &ChunkLoc{
+		SegId:       sr.seg.id,
+		BlockIndex:  sr.blockIdx,
+		ChunkOffset: sr.chunkOff,
+	}
+
+	val, nextChunk, err := sr.seg.readInternal(sr.blockIdx, sr.chunkOff)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// estimated chunk size, paddings may exist between two chunks.
+	curChunk.ChunkSize =
+		nextChunk.BlockIndex*blockSize + uint32(nextChunk.ChunkOffset) -
+			(curChunk.BlockIndex*blockSize + uint32(curChunk.ChunkOffset))
+
+	// reader points to next position
+	sr.blockIdx = nextChunk.BlockIndex
+	sr.chunkOff = nextChunk.ChunkOffset
+
+	return val, curChunk, nil
 }
 
 // Encode encodes a ChunkLoc into bytes.
