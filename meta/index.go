@@ -1,21 +1,22 @@
 package meta
 
 import (
-	"yojoudb"
+	"yojoudb/wal"
 )
 
 // K alias for []byte
 type K = []byte
 
-// Loc alias for *data.LRLoc
-type Loc = *yojoudb.LRLoc
+// Loc alias for *wal.ChunkLoc
+type Loc = *wal.ChunkLoc
+type Loc1 = wal.ChunkLoc
 
-// Indexer abstract index
+// Indexer is the interface for in-memory index.
 type Indexer interface {
 	Put(key K, loc Loc) Loc
 	Get(key K) Loc
 	Delete(key K) (Loc, bool)
-	Iterator(reverse bool) Iterator
+	Iterator(opt IteratorOpt) Iterator
 	Size() int
 }
 
@@ -48,4 +49,9 @@ type Iterator interface {
 	Key() []byte
 	Value() Loc
 	Close()
+}
+
+type IteratorOpt struct {
+	Prefix  K
+	Reverse bool
 }

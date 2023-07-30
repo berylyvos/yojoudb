@@ -75,13 +75,13 @@ func (bt *BTree) Size() int {
 	return bt.tree.Len()
 }
 
-func (bt *BTree) Iterator(reverse bool) Iterator {
+func (bt *BTree) Iterator(opt IteratorOpt) Iterator {
 	if bt.tree == nil {
 		return nil
 	}
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
-	return newBtreeIterator(bt.tree, reverse)
+	return newBtreeIterator(bt.tree, opt.Reverse)
 }
 
 type btreeIterator struct {

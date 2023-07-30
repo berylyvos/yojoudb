@@ -53,6 +53,6 @@ func (sl *Skiplist) Size() int {
 	return sl.list.Len()
 }
 
-func (sl *Skiplist) Iterator(reverse bool) Iterator {
+func (sl *Skiplist) Iterator(opt IteratorOpt) Iterator {
 	return nil
 }

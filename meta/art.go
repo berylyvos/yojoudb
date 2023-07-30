@@ -47,13 +47,13 @@ func (art *ART) Delete(key K) (Loc, bool) {
 	return oldVal.(Loc), deleted
 }
 
-func (art *ART) Iterator(reverse bool) Iterator {
+func (art *ART) Iterator(opt IteratorOpt) Iterator {
 	if art == nil {
 		return nil
 	}
 	art.mu.RLock()
 	defer art.mu.RUnlock()
-	return newARTIterator(art.tree, reverse)
+	return newARTIterator(art.tree, opt)
 }
 
 func (art *ART) Size() int {
@@ -68,11 +68,11 @@ type artIterator struct {
 	values   []*Item
 }
 
-func newARTIterator(tree gart.Tree, reverse bool) *artIterator {
+func newARTIterator(tree gart.Tree, opt IteratorOpt) *artIterator {
 	var idx int
 	sz := tree.Size()
 	values := make([]*Item, sz)
-	if reverse {
+	if opt.Reverse {
 		idx = sz - 1
 	}
 
@@ -81,7 +81,7 @@ func newARTIterator(tree gart.Tree, reverse bool) *artIterator {
 			key: node.Key(),
 			loc: node.Value().(Loc),
 		}
-		if reverse {
+		if opt.Reverse {
 			idx--
 		} else {
 			idx++
@@ -93,7 +93,7 @@ func newARTIterator(tree gart.Tree, reverse bool) *artIterator {
 
 	return &artIterator{
 		curIndex: 0,
-		reverse:  reverse,
+		reverse:  opt.Reverse,
 		values:   values,
 	}
 }
@@ -104,6 +104,7 @@ func (ai *artIterator) Rewind() {
 
 func (ai *artIterator) Seek(key []byte) {
 	if ai.reverse {
+		// sort.Search may return n, for simple, we do not handle it.
 		ai.curIndex = sort.Search(len(ai.values), func(i int) bool {
 			return bytes.Compare(ai.values[i].key, key) <= 0
 		})
