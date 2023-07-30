@@ -16,6 +16,7 @@ func init() {
 		DirPath:        dir,
 		SegmentFileExt: ".SEG",
 		SegmentSize:    32 * 1024 * 1024,
+		BlockCacheSize: 32 * 1024 * 32,
 	}
 	var err error
 	w, err = wal.Open(opts)
@@ -24,6 +25,7 @@ func init() {
 	}
 }
 
+// BenchmarkWAL_Write-8   	  460660	      2656 ns/op	      40 B/op	       2 allocs/op
 func BenchmarkWAL_Write(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -34,7 +36,11 @@ func BenchmarkWAL_Write(b *testing.B) {
 	}
 }
 
-// BenchmarkWAL_Read-8   	  271761	      4246 ns/op	   32814 B/op	       3 allocs/op
+// BenchmarkWAL_Read-8   	  		  		  271761	      4246 ns/op	   32814 B/op	       3 allocs/op
+// BenchmarkWAL_Read-8-With-Pool  	  		  658446	      1699 ns/op	      40 B/op	       2 allocs/op
+// BenchmarkWAL_Read-8-With-Pool-LRU-32   	  240200	      4685 ns/op	   30900 B/op	       3 allocs/op
+// BenchmarkWAL_Read-8-With-Pool-LRU-512  	  851979	      1463 ns/op	    2317 B/op	       2 allocs/op
+// BenchmarkWAL_Read-8-With-Pool-LRU-1024	 1203106	       977.1 ns/op	      55 B/op	       2 allocs/op
 func BenchmarkWAL_Read(b *testing.B) {
 	var positions []*wal.ChunkLoc
 	for i := 0; i < 1000000; i++ {
