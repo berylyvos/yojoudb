@@ -6,12 +6,12 @@ import (
 )
 
 type Options struct {
-	DirPath      string
-	DataFileSize int64
-	SyncWrites   bool
-	BytesPerSync uint
-	IndexType    meta.IndexType
-	MergeRatio   float32
+	DirPath        string
+	SegmentSize    int64
+	BlockCacheSize uint32
+	Sync           bool
+	BytesPerSync   uint32
+	IndexType      meta.IndexType
 }
 
 type IteratorOptions struct {
@@ -24,13 +24,20 @@ type WriteBatchOptions struct {
 	SyncWrites  bool
 }
 
+const (
+	B  = 1
+	KB = 1024 * B
+	MB = 1024 * KB
+	GB = 1024 * MB
+)
+
 var DefaultOptions = &Options{
-	DirPath:      os.TempDir(),
-	DataFileSize: 256 * 1024 * 1024, // 256MB
-	SyncWrites:   false,
-	BytesPerSync: 0,
-	IndexType:    meta.IndexART,
-	MergeRatio:   0.5,
+	DirPath:        tempDBDir(),
+	SegmentSize:    256 * MB,
+	BlockCacheSize: 64 * MB,
+	Sync:           false,
+	BytesPerSync:   0,
+	IndexType:      meta.IndexART,
 }
 
 var DefaultIteratorOptions = IteratorOptions{
@@ -41,4 +48,9 @@ var DefaultIteratorOptions = IteratorOptions{
 var DefaultWriteBatchOptions = WriteBatchOptions{
 	MaxBatchNum: 10000,
 	SyncWrites:  true,
+}
+
+func tempDBDir() string {
+	dir, _ := os.MkdirTemp("", "yojoudb-temp-")
+	return dir
 }
