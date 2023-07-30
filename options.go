@@ -31,7 +31,7 @@ const (
 	GB = 1024 * MB
 )
 
-var DefaultOptions = &Options{
+var DefaultOptions = Options{
 	DirPath:        tempDBDir(),
 	SegmentSize:    256 * MB,
 	BlockCacheSize: 64 * MB,
