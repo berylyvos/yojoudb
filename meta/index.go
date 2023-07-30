@@ -1,14 +1,14 @@
 package meta
 
 import (
-	"yojoudb/data"
+	"yojoudb"
 )
 
 // K alias for []byte
 type K = []byte
 
 // Loc alias for *data.LRLoc
-type Loc = *data.LRLoc
+type Loc = *yojoudb.LRLoc
 
 // Indexer abstract index
 type Indexer interface {

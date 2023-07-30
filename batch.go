@@ -3,7 +3,6 @@ package yojoudb
 import (
 	"encoding/binary"
 	"sync"
-	"yojoudb/data"
 )
 
 const (
@@ -62,7 +61,7 @@ func (wb *WriteBatch) Delete(key K) error {
 
 	wb.pendingWrites[k] = &LR{
 		Key:  key,
-		Type: data.LRDeleted,
+		Type: LRDeleted,
 	}
 	return nil
 }
@@ -102,7 +101,7 @@ func (wb *WriteBatch) Commit() error {
 	// a log record to indicate the completion of a Tx
 	finLR := &LR{
 		Key:  spliceSeqNoAndKey(txFinKey, seqNo),
-		Type: data.LRTxFin,
+		Type: LRTxFin,
 	}
 	if _, err := wb.db.appendLogRecord(finLR); err != nil {
 		return err
@@ -118,9 +117,9 @@ func (wb *WriteBatch) Commit() error {
 	// all data persisted, update in-memory index
 	for _, lr := range wb.pendingWrites {
 		var oldVal *Loc
-		if lr.Type == data.LRDeleted {
+		if lr.Type == LRDeleted {
 			oldVal, _ = wb.db.index.Delete(lr.Key)
-		} else if lr.Type == data.LRNormal {
+		} else if lr.Type == LRNormal {
 			oldVal = wb.db.index.Put(lr.Key, locs[string(lr.Key)])
 		}
 		if oldVal != nil {

@@ -3,32 +3,32 @@ package meta
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"yojoudb/data"
+	"yojoudb"
 )
 
 func TestBTree_Put(t *testing.T) {
 	bt := NewBTree()
 
-	res1 := bt.Put(nil, &data.LRLoc{Fid: 1, Offset: 100})
+	res1 := bt.Put(nil, &yojoudb.LRLoc{Fid: 1, Offset: 100})
 	assert.Nil(t, res1)
 
-	res2 := bt.Put([]byte("a"), &data.LRLoc{Fid: 1, Offset: 200})
+	res2 := bt.Put([]byte("a"), &yojoudb.LRLoc{Fid: 1, Offset: 200})
 	assert.Nil(t, res2)
 }
 
 func TestBTree_Get(t *testing.T) {
 	bt := NewBTree()
 
-	res1 := bt.Put(nil, &data.LRLoc{Fid: 1, Offset: 100})
+	res1 := bt.Put(nil, &yojoudb.LRLoc{Fid: 1, Offset: 100})
 	assert.Nil(t, res1)
 
 	pst1 := bt.Get(nil)
 	assert.Equal(t, uint32(1), pst1.Fid)
 	assert.Equal(t, int64(100), pst1.Offset)
 
-	res2 := bt.Put([]byte("a"), &data.LRLoc{Fid: 1, Offset: 200})
+	res2 := bt.Put([]byte("a"), &yojoudb.LRLoc{Fid: 1, Offset: 200})
 	assert.Nil(t, res2)
-	res3 := bt.Put([]byte("a"), &data.LRLoc{Fid: 1, Offset: 300})
+	res3 := bt.Put([]byte("a"), &yojoudb.LRLoc{Fid: 1, Offset: 300})
 	assert.Equal(t, res3.Fid, uint32(1))
 	assert.Equal(t, res3.Offset, int64(200))
 
@@ -40,14 +40,14 @@ func TestBTree_Get(t *testing.T) {
 func TestBTree_Delete(t *testing.T) {
 	bt := NewBTree()
 
-	res1 := bt.Put(nil, &data.LRLoc{Fid: 1, Offset: 100})
+	res1 := bt.Put(nil, &yojoudb.LRLoc{Fid: 1, Offset: 100})
 	assert.Nil(t, res1)
 	res2, ok1 := bt.Delete(nil)
 	assert.True(t, ok1)
 	assert.Equal(t, res2.Fid, uint32(1))
 	assert.Equal(t, res2.Offset, int64(100))
 
-	res3 := bt.Put([]byte("aaa"), &data.LRLoc{Fid: 22, Offset: 33})
+	res3 := bt.Put([]byte("aaa"), &yojoudb.LRLoc{Fid: 22, Offset: 33})
 	assert.Nil(t, res3)
 	res4, ok2 := bt.Delete([]byte("aaa"))
 	assert.True(t, ok2)
@@ -61,7 +61,7 @@ func TestBTree_Iterator(t *testing.T) {
 	assert.Equal(t, false, iter1.Valid())
 
 	// put one record
-	bt1.Put([]byte("aaa"), &data.LRLoc{Fid: 1, Offset: 10})
+	bt1.Put([]byte("aaa"), &yojoudb.LRLoc{Fid: 1, Offset: 10})
 	iter2 := bt1.Iterator(false)
 	assert.Equal(t, true, iter2.Valid())
 	assert.NotNil(t, iter2.Key())
@@ -70,10 +70,10 @@ func TestBTree_Iterator(t *testing.T) {
 	assert.Equal(t, false, iter2.Valid())
 
 	// iterate records
-	bt1.Put([]byte("aaa"), &data.LRLoc{Fid: 1, Offset: 0})
-	bt1.Put([]byte("bbb"), &data.LRLoc{Fid: 1, Offset: 11})
-	bt1.Put([]byte("ccc"), &data.LRLoc{Fid: 1, Offset: 22})
-	bt1.Put([]byte("zzz"), &data.LRLoc{Fid: 1, Offset: 22})
+	bt1.Put([]byte("aaa"), &yojoudb.LRLoc{Fid: 1, Offset: 0})
+	bt1.Put([]byte("bbb"), &yojoudb.LRLoc{Fid: 1, Offset: 11})
+	bt1.Put([]byte("ccc"), &yojoudb.LRLoc{Fid: 1, Offset: 22})
+	bt1.Put([]byte("zzz"), &yojoudb.LRLoc{Fid: 1, Offset: 22})
 	iter3 := bt1.Iterator(false)
 	for iter3.Rewind(); iter3.Valid(); iter3.Next() {
 		assert.NotNil(t, iter3.Key())

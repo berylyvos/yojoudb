@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"yojoudb/data"
 	"yojoudb/meta"
 	"yojoudb/utils"
 	"yojoudb/wal"
@@ -51,13 +50,7 @@ type K = []byte
 type V = []byte
 
 // LR alias for data.LogRecord
-type LR = data.LogRecord
-
-// TxR alias for data.TxRecord
-type TxR = data.TxRecord
-
-// Loc alias for data.LRLoc
-type Loc = data.LRLoc
+type LR = LogRecord
 
 // Open opens a db instance with specified options.
 // It will open the WAL files and build the index.
