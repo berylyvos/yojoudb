@@ -1,66 +1,68 @@
 package yojoudb
 
 import (
-	"bytes"
 	"yojoudb/meta"
 )
 
+// Iterator is the iterator of db based on IndexIter.
 type Iterator struct {
-	options   IteratorOptions
 	IndexIter meta.Iterator
 	db        *DB
 }
 
 func (db *DB) NewIterator(options IteratorOptions) *Iterator {
-	iterator := db.index.Iterator(options.Reverse)
 	return &Iterator{
-		IndexIter: iterator,
-		options:   options,
-		db:        db,
+		db: db,
+		IndexIter: db.index.Iterator(meta.IteratorOpt{
+			Prefix:  options.Prefix,
+			Reverse: options.Reverse,
+		}),
 	}
 }
 
+// Rewind seeks the first key in the iterator.
 func (it *Iterator) Rewind() {
 	it.IndexIter.Rewind()
-	it.skipToNext()
 }
 
+// Seek moves the iterator to the key which is
+// greater(or less when reverse) than or equal
+// to the specified key.
 func (it *Iterator) Seek(key []byte) {
 	it.IndexIter.Seek(key)
-	it.skipToNext()
 }
 
+// Next moves the iterator to the next key.
 func (it *Iterator) Next() {
 	it.IndexIter.Next()
-	it.skipToNext()
 }
 
-func (it *Iterator) Valid() bool {
-	return it.IndexIter.Valid()
-}
-
+// Key gets the current key in the iterator.
 func (it *Iterator) Key() []byte {
 	return it.IndexIter.Key()
 }
 
+// Value gets the current val in the iterator.
 func (it *Iterator) Value() ([]byte, error) {
-	it.db.mu.RLock()
-	defer it.db.mu.RUnlock()
-	return it.db.retrievalByLoc(it.IndexIter.Value())
+	loc := it.IndexIter.Value()
+	chunk, err := it.db.dataFiles.Read(loc)
+	if err != nil {
+		return nil, err
+	}
+
+	record := decodeLR(chunk)
+	if record.Type == LRDeleted {
+		return nil, ErrKeyNotFound
+	}
+	return record.Val, nil
 }
 
+// Valid checks if the iterator is in valid position.
+func (it *Iterator) Valid() bool {
+	return it.IndexIter.Valid()
+}
+
+// Close closes the iterator.
 func (it *Iterator) Close() {
 	it.IndexIter.Close()
-}
-
-// skipToNext skips to next index which key start with it.options.Prefix
-func (it *Iterator) skipToNext() {
-	if len(it.options.Prefix) == 0 {
-		return
-	}
-	for ; it.IndexIter.Valid(); it.IndexIter.Next() {
-		if bytes.HasPrefix(it.IndexIter.Key(), it.options.Prefix) {
-			break
-		}
-	}
 }

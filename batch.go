@@ -67,68 +67,6 @@ func (wb *WriteBatch) Delete(key K) error {
 }
 
 func (wb *WriteBatch) Commit() error {
-	wb.mu.Lock()
-	defer wb.mu.Unlock()
-
-	if len(wb.pendingWrites) == 0 {
-		return nil
-	}
-	if uint(len(wb.pendingWrites)) > wb.opt.MaxBatchNum {
-		return ErrExceedMaxBatchNum
-	}
-
-	// a BIG LOCK for serialized Tx
-	wb.db.mu.Lock()
-	defer wb.db.mu.Unlock()
-
-	// seqNo++
-	seqNo := wb.db.SeqNoIncr()
-
-	locs := make(map[string]*Loc)
-	for _, lr := range wb.pendingWrites {
-		// use appendLogRecord (no-lock) to avoid deadlock
-		loc, err := wb.db.appendLogRecord(&LR{
-			Key:  spliceSeqNoAndKey(lr.Key, seqNo),
-			Val:  lr.Val,
-			Type: lr.Type,
-		})
-		if err != nil {
-			return err
-		}
-		locs[string(lr.Key)] = loc
-	}
-
-	// a log record to indicate the completion of a Tx
-	finLR := &LR{
-		Key:  spliceSeqNoAndKey(txFinKey, seqNo),
-		Type: LRTxFin,
-	}
-	if _, err := wb.db.appendLogRecord(finLR); err != nil {
-		return err
-	}
-
-	// check for sync write
-	if wb.opt.SyncWrites && wb.db.activeFile != nil {
-		if err := wb.db.activeFile.Sync(); err != nil {
-			return err
-		}
-	}
-
-	// all data persisted, update in-memory index
-	for _, lr := range wb.pendingWrites {
-		var oldVal *Loc
-		if lr.Type == LRDeleted {
-			oldVal, _ = wb.db.index.Delete(lr.Key)
-		} else if lr.Type == LRNormal {
-			oldVal = wb.db.index.Put(lr.Key, locs[string(lr.Key)])
-		}
-		if oldVal != nil {
-			wb.db.reclaimSize += int64(oldVal.Size)
-		}
-	}
-
-	// reset pendingWrites
-	wb.pendingWrites = make(map[string]*LR)
 
 	return nil
 }
