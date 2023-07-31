@@ -2,7 +2,9 @@ package yojoudb
 
 import (
 	"fmt"
+	"github.com/bwmarrin/snowflake"
 	"github.com/gofrs/flock"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -246,11 +248,53 @@ func (db *DB) Fold(fn func(key []byte, value []byte) bool) error {
 // It will iterate all over the WAL files and
 // read data from them to rebuild the index.
 func (db *DB) loadIndexer() error {
+	// TODO
 	//mergeFinSegId, err := getMergeFinSegmentId(db.options.DirPath)
 	//if err != nil {
 	//	return err
 	//}
-	// TODO
+
+	// batchId => indexRecords
+	indexRecords := make(map[uint64][]*IndexRecord)
+	// get a reader for WAL
+	reader := db.dataFiles.NewReader()
+	for {
+
+		chunk, loc, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		record := decodeLR(chunk)
+
+		// if reaching to end-of-batch,
+		// put or delete all records in the batch to index.
+		if record.Type == LRBatchFin {
+			snowflakeId, err := snowflake.ParseBytes(record.Key)
+			if err != nil {
+				return err
+			}
+			batchId := uint64(snowflakeId)
+			for _, idxRec := range indexRecords[batchId] {
+				if idxRec.typ == LRNormal {
+					db.index.Put(idxRec.key, idxRec.loc)
+				}
+				if idxRec.typ == LRDeleted {
+					db.index.Delete(idxRec.key)
+				}
+			}
+			delete(indexRecords, batchId)
+		} else {
+			indexRecords[record.BatchId] = append(indexRecords[record.BatchId],
+				&IndexRecord{
+					key: record.Key,
+					typ: record.Type,
+					loc: loc,
+				})
+		}
+	}
 
 	return nil
 }
