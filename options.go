@@ -19,9 +19,9 @@ type IteratorOptions struct {
 	Reverse bool
 }
 
-type WriteBatchOptions struct {
-	MaxBatchNum uint
-	SyncWrites  bool
+type BatchOptions struct {
+	Sync     bool
+	ReadOnly bool
 }
 
 const (
@@ -45,9 +45,9 @@ var DefaultIteratorOptions = IteratorOptions{
 	Reverse: false,
 }
 
-var DefaultWriteBatchOptions = WriteBatchOptions{
-	MaxBatchNum: 10000,
-	SyncWrites:  true,
+var DefaultBatchOptions = BatchOptions{
+	Sync:     true,
+	ReadOnly: false,
 }
 
 func tempDBDir() string {

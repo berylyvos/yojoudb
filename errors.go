@@ -16,4 +16,6 @@ var (
 	ErrInvalidMergeRatio       = errors.New("invalid merge ratio, must between 0 and 1")
 	ErrMergeRatioUnreached     = errors.New("the merge ratio do not reach the option")
 	ErrNoEnoughSpaceForMerge   = errors.New("no enough disk space for merge")
+	ErrDBClosed                = errors.New("the database is closed")
+	ErrReadOnlyBatch           = errors.New("the batch is read only")
 )

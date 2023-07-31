@@ -49,8 +49,11 @@ type K = []byte
 // V value alias for []byte
 type V = []byte
 
-// LR alias for data.LogRecord
+// LR alias for LogRecord
 type LR = LogRecord
+
+// Loc alias for wal.ChunkLoc
+type Loc = wal.ChunkLoc
 
 // Open opens a db instance with specified options.
 // It will open the WAL files and build the index.
@@ -164,27 +167,47 @@ func (db *DB) Sync() error {
 
 // Put puts the given key/val.
 func (db *DB) Put(key K, val V) error {
-	// TODO
-	return nil
+	batchOpt := DefaultBatchOptions
+	batchOpt.Sync = false
+	batch := db.NewBatch(batchOpt)
+	if err := batch.Put(key, val); err != nil {
+		return err
+	}
+	return batch.Commit()
 }
 
 // Get gets the value of the given key.
 // Returns nil if key is not found.
 func (db *DB) Get(key K) (V, error) {
-	// TODO
-	return nil, nil
+	batchOpt := DefaultBatchOptions
+	batchOpt.ReadOnly = true
+	batch := db.NewBatch(batchOpt)
+	defer func() {
+		_ = batch.Commit()
+	}()
+	return batch.Get(key)
 }
 
 // Delete deletes the given key.
 func (db *DB) Delete(key K) error {
-	// TODO
-	return nil
+	batchOpt := DefaultBatchOptions
+	batchOpt.Sync = false
+	batch := db.NewBatch(batchOpt)
+	if err := batch.Delete(key); err != nil {
+		return err
+	}
+	return batch.Commit()
 }
 
 // Exist checks if the given key exists.
 func (db *DB) Exist(key K) (bool, error) {
-	// TODO
-	return false, nil
+	batchOpt := DefaultBatchOptions
+	batchOpt.ReadOnly = true
+	batch := db.NewBatch(batchOpt)
+	defer func() {
+		_ = batch.Commit()
+	}()
+	return batch.Exist(key)
 }
 
 // ListKeys returns all keys in db instance.
