@@ -2,6 +2,7 @@ package yojoudb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 	"os"
@@ -71,7 +72,7 @@ func (db *DB) Merge() error {
 			db.mu.RLock()
 			indexLoc := db.index.Get(record.Key)
 			db.mu.RUnlock()
-			// this means current record is the newest one.
+			// if current record is the newest one.
 			if indexLoc != nil && locEqual(indexLoc, loc) {
 				record.BatchId = mergeFinBatchId
 				newLoc, err := mergeDB.dataFiles.Write(encodeLR(record))
@@ -106,13 +107,13 @@ func (db *DB) Merge() error {
 }
 
 func (db *DB) openMergeDB() (*DB, error) {
-	mergePath := mergeDirPath(db.options.DirPath)
-	if err := os.RemoveAll(mergePath); err != nil {
+	mergeDir := mergeDirPath(db.options.DirPath)
+	if err := os.RemoveAll(mergeDir); err != nil {
 		return nil, err
 	}
 	options := db.options
 	options.Sync, options.BytesPerSync = false, 0
-	options.DirPath = mergePath
+	options.DirPath = mergeDir
 	mergeDB, err := Open(options)
 	if err != nil {
 		return nil, err
@@ -149,18 +150,100 @@ func mergeDirPath(path string) string {
 	return filepath.Join(dir, filepath.Base(path)+mergeDirSuffix)
 }
 
-func (db *DB) loadMergedFiles() error {
+// loadMergedFiles loads all merged files from mergeDB.
+// Copying and overwriting data to DB dir.
+func loadMergedFiles(dirPath string) error {
+	mergeDir := mergeDirPath(dirPath)
+	if _, err := os.Stat(mergeDir); err != nil {
+		return nil
+	}
+
+	defer func() {
+		_ = os.RemoveAll(mergeDir)
+	}()
+
+	copySeg := func(suffix string, segId wal.SegmentID) {
+		src := wal.SegmentFileName(mergeDir, suffix, segId)
+		stat, err := os.Stat(src)
+		if os.IsNotExist(err) {
+			return
+		}
+		if err != nil {
+			panic(fmt.Sprintf("failed to get file stat %v", err))
+		}
+		if stat.Size() == 0 {
+			return
+		}
+		dst := wal.SegmentFileName(dirPath, suffix, segId)
+		_ = os.Rename(src, dst)
+	}
+
+	mergeFinSegId, err := getMergeFinSegId(mergeDir)
+	if err != nil {
+		return err
+	}
+
+	for sid := wal.SegmentID(1); sid <= mergeFinSegId; sid++ {
+		dst := wal.SegmentFileName(dirPath, dataFileSuffix, sid)
+		if err = os.Remove(dst); err != nil {
+			return err
+		}
+		copySeg(dataFileSuffix, sid)
+	}
+
+	copySeg(mergeFinSuffix, 1)
+	copySeg(hintFileSuffix, 1)
 
 	return nil
+}
+
+func getMergeFinSegId(mergeDir string) (wal.SegmentID, error) {
+	mergeFinFile, err := os.Open(wal.SegmentFileName(mergeDir, mergeFinSuffix, 1))
+	if err != nil {
+		// merge unfinished
+		return 0, nil
+	}
+	defer func() {
+		_ = mergeFinFile.Close()
+	}()
+
+	// SegmentID 4B
+	buf := make([]byte, 4)
+	// chunkHeaderSize = 7
+	if _, err := mergeFinFile.ReadAt(buf, 7); err != nil {
+		return 0, err
+	}
+	mergeFinSegId := binary.LittleEndian.Uint32(buf)
+	return mergeFinSegId, nil
 }
 
 func (db *DB) loadIndexerFromHint() error {
+	hintFile, err := wal.Open(wal.Options{
+		DirPath:        db.options.DirPath,
+		SegmentSize:    math.MaxInt64,
+		SegmentFileExt: hintFileSuffix,
+	})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = hintFile.Close()
+	}()
+
+	reader := hintFile.NewReader()
+	for {
+		bytes, _, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		key, loc := decodeHintRecord(bytes)
+		db.index.Put(key, loc)
+	}
 
 	return nil
-}
-
-func (db *DB) getNotMergedFileId(dirPath string) (uint32, error) {
-	return 0, nil
 }
 
 func (db *DB) getMergePath() string {
