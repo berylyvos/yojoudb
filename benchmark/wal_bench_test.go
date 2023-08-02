@@ -16,7 +16,6 @@ func init() {
 		DirPath:        dir,
 		SegmentFileExt: ".SEG",
 		SegmentSize:    32 * 1024 * 1024,
-		BlockCacheSize: 32 * 1024 * 32,
 	}
 	var err error
 	w, err = wal.Open(opts)
