@@ -39,8 +39,8 @@ type DB struct {
 }
 
 type Stat struct {
-	KeyNum          uint
-	DataFileNum     uint
+	KeyNum          uint64
+	DataFileNum     uint32
 	ReclaimableSize int64
 	DiskSize        int64
 }
@@ -81,9 +81,9 @@ func Open(options Options) (*DB, error) {
 	}
 
 	// load merged files if exists
-	// if err := loadMergedFiles(options.DirPath); err != nil {
-	// 	return nil, err
-	// }
+	if err := loadMergedFiles(options.DirPath); err != nil {
+		return nil, err
+	}
 
 	// open data files in WAL
 	dataFiles, err := wal.Open(wal.Options{
@@ -106,7 +106,7 @@ func Open(options Options) (*DB, error) {
 		fileLock:  fileLock,
 	}
 
-	// load index from hint file
+	// load index from hint file if there's a merged db
 	if err := db.loadIndexerFromHint(); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (db *DB) Stat() *Stat {
 		panic(fmt.Sprintf("failed to get dir size : %v", err))
 	}
 	return &Stat{
-		KeyNum:          uint(db.index.Size()),
+		KeyNum:          uint64(uint(db.index.Size())),
 		ReclaimableSize: db.reclaimSize,
 		DiskSize:        dirSize,
 	}
@@ -248,17 +248,22 @@ func (db *DB) Fold(fn func(key []byte, value []byte) bool) error {
 // It will iterate all over the WAL files and
 // read data from them to rebuild the index.
 func (db *DB) loadIndexer() error {
-	// TODO
-	//mergeFinSegId, err := getMergeFinSegmentId(db.options.DirPath)
-	//if err != nil {
-	//	return err
-	//}
+	mergeFinSegId, err := getMergeFinSegId(db.options.DirPath)
+	if err != nil {
+		return err
+	}
 
 	// batchId => indexRecords
 	indexRecords := make(map[uint64][]*IndexRecord)
-	// get a reader for WAL
+
 	reader := db.dataFiles.NewReader()
 	for {
+		// skip the segments which segId is less than or equal to mergeFinSegId,
+		// their indexes has already been loaded through hint file.
+		if reader.CurrSegId() <= mergeFinSegId {
+			reader.Skip()
+			continue
+		}
 
 		chunk, loc, err := reader.Next()
 		if err != nil {
