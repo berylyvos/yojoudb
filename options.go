@@ -33,7 +33,7 @@ const (
 
 var DefaultOptions = Options{
 	DirPath:        tempDBDir(),
-	SegmentSize:    256 * MB,
+	SegmentSize:    GB,
 	BlockCacheSize: 64 * MB,
 	Sync:           false,
 	BytesPerSync:   0,
