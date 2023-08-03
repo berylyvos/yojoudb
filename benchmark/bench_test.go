@@ -1,13 +1,13 @@
 package benchmark
 
 import (
+	"github.com/berylyvos/yojoudb"
+	"github.com/berylyvos/yojoudb/utils"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
-	"yojoudb"
-	"yojoudb/utils"
 )
 
 var db *yojoudb.DB

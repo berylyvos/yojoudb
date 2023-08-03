@@ -1,7 +1,7 @@
 package yojoudb
 
 import (
-	"yojoudb/meta"
+	"github.com/berylyvos/yojoudb/meta"
 )
 
 // Iterator is the iterator of db based on IndexIter.

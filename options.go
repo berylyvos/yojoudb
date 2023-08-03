@@ -1,8 +1,8 @@
 package yojoudb
 
 import (
+	"github.com/berylyvos/yojoudb/meta"
 	"os"
-	"yojoudb/meta"
 )
 
 type Options struct {

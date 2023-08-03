@@ -1,12 +1,12 @@
 package yojoudb
 
 import (
+	"github.com/berylyvos/yojoudb/utils"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"os"
 	"sync"
 	"testing"
-	"yojoudb/utils"
 )
 
 func destroyDB(db *DB) {

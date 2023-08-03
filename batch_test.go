@@ -1,9 +1,9 @@
 package yojoudb
 
 import (
+	"github.com/berylyvos/yojoudb/utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"yojoudb/utils"
 )
 
 func TestBatch_Put_Normal(t *testing.T) {

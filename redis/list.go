@@ -2,7 +2,7 @@ package redis
 
 import (
 	"encoding/binary"
-	"yojoudb"
+	"github.com/berylyvos/yojoudb"
 )
 
 type listInternalKey struct {
@@ -63,7 +63,7 @@ func (rc *RedisCmd) push(key, element []byte, isLeft bool) (uint32, error) {
 	}
 
 	encKey := listEncKey(key, md.version, idx)
-	wb := rc.db.NewWriteBatch(yojoudb.DefaultWriteBatchOptions)
+	wb := rc.db.NewBatch(yojoudb.DefaultBatchOptions)
 	md.size++
 	if isLeft {
 		md.head--

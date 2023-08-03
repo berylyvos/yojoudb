@@ -2,7 +2,7 @@ package yojoudb
 
 import (
 	"encoding/binary"
-	"yojoudb/wal"
+	"github.com/berylyvos/yojoudb/wal"
 )
 
 type LRType = byte

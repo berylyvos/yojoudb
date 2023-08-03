@@ -2,7 +2,7 @@ package redis
 
 import (
 	"errors"
-	"yojoudb"
+	"github.com/berylyvos/yojoudb"
 )
 
 var (
@@ -23,7 +23,7 @@ type RedisCmd struct {
 	db *yojoudb.DB
 }
 
-func NewRedisCmd(options *yojoudb.Options) (*RedisCmd, error) {
+func NewRedisCmd(options yojoudb.Options) (*RedisCmd, error) {
 	db, err := yojoudb.Open(options)
 	if err != nil {
 		return nil, err

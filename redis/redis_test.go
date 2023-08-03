@@ -1,12 +1,12 @@
 package redis
 
 import (
+	"github.com/berylyvos/yojoudb"
+	"github.com/berylyvos/yojoudb/utils"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
-	"yojoudb"
-	"yojoudb/utils"
 )
 
 func TestRedis_Del_Type(t *testing.T) {

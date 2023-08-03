@@ -1,4 +1,4 @@
-module yojoudb
+module github.com/berylyvos/yojoudb
 
 go 1.19
 

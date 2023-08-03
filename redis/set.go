@@ -2,7 +2,7 @@ package redis
 
 import (
 	"encoding/binary"
-	"yojoudb"
+	"github.com/berylyvos/yojoudb"
 )
 
 type setInternalKey struct {
@@ -46,7 +46,7 @@ func (rc *RedisCmd) SAdd(key, member []byte) (bool, error) {
 
 	var ok = false
 	if _, err = rc.db.Get(encKey); err == yojoudb.ErrKeyNotFound {
-		wb := rc.db.NewWriteBatch(yojoudb.DefaultWriteBatchOptions)
+		wb := rc.db.NewBatch(yojoudb.DefaultBatchOptions)
 		md.size++
 		_ = wb.Put(key, md.encode())
 		_ = wb.Put(encKey, nil)
@@ -93,7 +93,7 @@ func (rc *RedisCmd) SRem(key, member []byte) (bool, error) {
 		return false, nil
 	}
 
-	wb := rc.db.NewWriteBatch(yojoudb.DefaultWriteBatchOptions)
+	wb := rc.db.NewBatch(yojoudb.DefaultBatchOptions)
 	md.size--
 	_ = wb.Put(key, md.encode())
 	_ = wb.Delete(encKey)

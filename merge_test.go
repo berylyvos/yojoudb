@@ -1,11 +1,11 @@
 package yojoudb
 
 import (
+	"github.com/berylyvos/yojoudb/utils"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"sync"
 	"testing"
-	"yojoudb/utils"
 )
 
 func TestDB_Merge_1_Empty(t *testing.T) {

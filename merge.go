@@ -3,13 +3,13 @@ package yojoudb
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/berylyvos/yojoudb/wal"
 	"io"
 	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"sync/atomic"
-	"yojoudb/wal"
 )
 
 const (

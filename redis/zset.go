@@ -2,8 +2,8 @@ package redis
 
 import (
 	"encoding/binary"
-	"yojoudb"
-	"yojoudb/utils"
+	"github.com/berylyvos/yojoudb"
+	"github.com/berylyvos/yojoudb/utils"
 )
 
 type zsetInternalKey struct {
@@ -73,7 +73,7 @@ func (rc *RedisCmd) ZAdd(key []byte, score float64, member []byte) (bool, error)
 		exist = true
 	}
 
-	wb := rc.db.NewWriteBatch(yojoudb.DefaultWriteBatchOptions)
+	wb := rc.db.NewBatch(yojoudb.DefaultBatchOptions)
 	if !exist {
 		md.size++
 		_ = wb.Put(key, md.encode())

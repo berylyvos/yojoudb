@@ -2,15 +2,15 @@ package yojoudb
 
 import (
 	"fmt"
+	"github.com/berylyvos/yojoudb/meta"
+	"github.com/berylyvos/yojoudb/utils"
+	"github.com/berylyvos/yojoudb/wal"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofrs/flock"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"yojoudb/meta"
-	"yojoudb/utils"
-	"yojoudb/wal"
 )
 
 const (

@@ -1,11 +1,11 @@
 package benchmark
 
 import (
+	"github.com/berylyvos/yojoudb/wal"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"os"
 	"testing"
-	"yojoudb/wal"
 )
 
 var w *wal.WAL

@@ -2,9 +2,9 @@ package redis
 
 import (
 	"encoding/binary"
+	"github.com/berylyvos/yojoudb"
 	"math"
 	"time"
-	"yojoudb"
 )
 
 const (

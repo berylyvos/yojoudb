@@ -1,7 +1,7 @@
 package meta
 
 import (
-	"yojoudb/wal"
+	"github.com/berylyvos/yojoudb/wal"
 )
 
 // K alias for []byte
