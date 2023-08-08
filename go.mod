@@ -10,6 +10,7 @@ require (
 	github.com/huandu/skiplist v1.2.0
 	github.com/plar/go-adaptive-radix-tree v1.0.5
 	github.com/stretchr/testify v1.8.3
+	github.com/valyala/bytebufferpool v1.0.0
 )
 
 require (

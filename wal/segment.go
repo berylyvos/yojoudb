@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/valyala/bytebufferpool"
 	"hash/crc32"
 	"io"
 	"os"
@@ -236,10 +237,13 @@ func (s *segment) writeInternal(data []byte, chunkType ChunkType) error {
 	binary.LittleEndian.PutUint32(s.header[:4], sum)
 
 	// append to the file
-	if _, err := s.fd.Write(s.header); err != nil {
-		return err
-	}
-	if _, err := s.fd.Write(data); err != nil {
+	buf := bytebufferpool.Get()
+	defer func() {
+		bytebufferpool.Put(buf)
+	}()
+	buf.B = append(buf.B, s.header...)
+	buf.B = append(buf.B, data...)
+	if _, err := s.fd.Write(buf.Bytes()); err != nil {
 		return err
 	}
 
