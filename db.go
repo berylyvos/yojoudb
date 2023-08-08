@@ -36,6 +36,7 @@ type DB struct {
 	closed       bool
 	mergeRunning uint32
 	reclaimSize  int64
+	batchPool    sync.Pool
 }
 
 type Stat struct {
@@ -104,6 +105,7 @@ func Open(options Options) (*DB, error) {
 		options:   options,
 		index:     meta.NewIndexer(options.IndexType),
 		fileLock:  fileLock,
+		batchPool: sync.Pool{New: makeBatch},
 	}
 
 	// load index from hint file if there's a merged db
@@ -169,10 +171,14 @@ func (db *DB) Sync() error {
 
 // Put puts the given key/val.
 func (db *DB) Put(key K, val V) error {
-	batchOpt := DefaultBatchOptions
-	batchOpt.Sync = false
-	batch := db.NewBatch(batchOpt)
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	batch.init(false, false, db).withPendingWrites()
 	if err := batch.Put(key, val); err != nil {
+		_ = batch.Rollback()
 		return err
 	}
 	return batch.Commit()
@@ -181,21 +187,30 @@ func (db *DB) Put(key K, val V) error {
 // Get gets the value of the given key.
 // Returns nil if key is not found.
 func (db *DB) Get(key K) (V, error) {
-	batchOpt := DefaultBatchOptions
-	batchOpt.ReadOnly = true
-	batch := db.NewBatch(batchOpt)
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	batch.init(true, false, db)
 	defer func() {
 		_ = batch.Commit()
+		batch.reset()
+		db.batchPool.Put(batch)
 	}()
 	return batch.Get(key)
 }
 
 // Delete deletes the given key.
 func (db *DB) Delete(key K) error {
-	batchOpt := DefaultBatchOptions
-	batchOpt.Sync = false
-	batch := db.NewBatch(batchOpt)
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	batch.init(false, false, db).withPendingWrites()
 	if err := batch.Delete(key); err != nil {
+		_ = batch.Rollback()
 		return err
 	}
 	return batch.Commit()
@@ -203,11 +218,12 @@ func (db *DB) Delete(key K) error {
 
 // Exist checks if the given key exists.
 func (db *DB) Exist(key K) (bool, error) {
-	batchOpt := DefaultBatchOptions
-	batchOpt.ReadOnly = true
-	batch := db.NewBatch(batchOpt)
+	batch := db.batchPool.Get().(*Batch)
+	batch.init(true, false, db)
 	defer func() {
 		_ = batch.Commit()
+		batch.reset()
+		db.batchPool.Put(batch)
 	}()
 	return batch.Exist(key)
 }
