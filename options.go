@@ -34,7 +34,7 @@ const (
 var DefaultOptions = Options{
 	DirPath:        tempDBDir(),
 	SegmentSize:    GB,
-	BlockCacheSize: 64 * MB,
+	BlockCacheSize: 0,
 	Sync:           false,
 	BytesPerSync:   0,
 	IndexType:      meta.IndexART,
