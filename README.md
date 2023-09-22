@@ -2,9 +2,6 @@
 A persistent key-value store based on Bitcask that supports the Redis protocol.
 
 ## Benchmarks
-| key nums  | key size | val size  | concurrency |
-|-----------|----------|-----------|-------------|
-| 2000000   | 16 ~ 64  | 128 ~ 512 | 5           |
 
 | Engine                                           | PUT                                | GET                                 | put + get | file size | peak sys mem |
 |--------------------------------------------------|------------------------------------|-------------------------------------|-----------|-----------|--------------|
@@ -14,6 +11,9 @@ A persistent key-value store based on Bitcask that supports the Redis protocol.
 | [goleveldb](https://github.com/syndtr/goleveldb) | 25.199s  &nbsp;&nbsp;  79367 ops/s | 6.956s &nbsp;&nbsp;   287539 ops/s  | 32.155s   | 714.31MB  | 529.79MB     |
 | [bbolt](https://github.com/etcd-io/bbolt)        | 84.245s  &nbsp;&nbsp;  23740 ops/s | 1.555s &nbsp;&nbsp;   1286247 ops/s | 85.800s   | 1.03GB    | 481.17MB     |
 
+| key nums  | key size | val size  | concurrency |
+|-----------|----------|-----------|-------------|
+| 2000000   | 16 ~ 64  | 128 ~ 512 | 5           |
 
 ### Index
 
