@@ -188,10 +188,6 @@ func (db *DB) Put(key K, val V) error {
 // Returns nil if key is not found.
 func (db *DB) Get(key K) (V, error) {
 	batch := db.batchPool.Get().(*Batch)
-	defer func() {
-		batch.reset()
-		db.batchPool.Put(batch)
-	}()
 	batch.init(true, false, db)
 	defer func() {
 		_ = batch.Commit()
