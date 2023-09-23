@@ -20,5 +20,5 @@ func RandValue(n int) []byte {
 	for i := range b {
 		b[i] = letters[randStr.Intn(len(letters))]
 	}
-	return []byte("(^ =3^)" + string(b))
+	return b
 }

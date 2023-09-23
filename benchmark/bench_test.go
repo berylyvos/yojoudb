@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+const (
+	KeyNum     = 1000000
+	MaxValSize = 512
+)
+
 var db *yojoudb.DB
 
 func init() {
@@ -29,22 +34,29 @@ func Benchmark_Put(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		err := db.Put(utils.TestKey(i), utils.RandValue(1024))
+		err := db.Put(utils.TestKey(i), utils.RandValue(MaxValSize))
 		assert.Nil(b, err)
 	}
 }
 
-func Benchmark_Get(b *testing.B) {
-	for i := 0; i < 10000; i++ {
-		err := db.Put(utils.TestKey(i), utils.RandValue(1024))
-		assert.Nil(b, err)
-	}
-
+func Benchmark_Seq_Get(b *testing.B) {
 	rand.Seed(time.Now().UnixNano())
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, err := db.Get(utils.TestKey(rand.Int()))
+		_, err := db.Get(utils.TestKey(i))
+		if err != nil && err != yojoudb.ErrKeyNotFound {
+			b.Fatal(err)
+		}
+	}
+}
+
+func Benchmark_Random_Get(b *testing.B) {
+	rand.Seed(time.Now().UnixNano())
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, err := db.Get(utils.TestKey(rand.Intn(KeyNum)))
 		if err != nil && err != yojoudb.ErrKeyNotFound {
 			b.Fatal(err)
 		}
@@ -57,7 +69,7 @@ func Benchmark_Delete(b *testing.B) {
 
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < b.N; i++ {
-		err := db.Delete(utils.TestKey(rand.Int()))
+		err := db.Delete(utils.TestKey(rand.Intn(KeyNum)))
 		assert.Nil(b, err)
 	}
 }
