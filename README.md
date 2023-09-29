@@ -3,6 +3,8 @@ A persistent key-value store based on Bitcask.
 
 ## Benchmarks
 
+### Performance Metrics
+
 | Engine                                           | PUT                                | GET                                 | put + get | file size | peak sys mem |
 |--------------------------------------------------|------------------------------------|-------------------------------------|-----------|-----------|--------------|
 | [yojoudb](https://github.com/berylyvos/yojoudb)  | 13.771s  &nbsp;&nbsp; 145229 ops/s | 2.163s &nbsp;&nbsp;   924817 ops/s  | 15.934s   | 782.15MB  | 1.31GB       |
@@ -11,13 +13,17 @@ A persistent key-value store based on Bitcask.
 | [goleveldb](https://github.com/syndtr/goleveldb) | 25.199s  &nbsp;&nbsp;  79367 ops/s | 6.956s &nbsp;&nbsp;   287539 ops/s  | 32.155s   | 714.31MB  | 529.79MB     |
 | [bbolt](https://github.com/etcd-io/bbolt)        | 84.245s  &nbsp;&nbsp;  23740 ops/s | 1.555s &nbsp;&nbsp;   1286247 ops/s | 85.800s   | 1.03GB    | 481.17MB     |
 
+### Parameters
+
 | key nums  | key size | val size  | concurrency |
 |-----------|----------|-----------|-------------|
 | 2000000   | 16 ~ 64  | 128 ~ 512 | 5           |
 
-### Index
+## Index Comparison
 
-#### Adaptive-Radix-Tree
+In this project, we chose [ART](https://github.com/plar/go-adaptive-radix-tree)(Adaptive Radix Tree) as the default in-memory index.
+
+### ART
 
 ```
 Benchmark_Put-8           161097            7469  ns/op            4604 B/op        9 allocs/op
@@ -25,7 +31,7 @@ Benchmark_Get-8          6997028            165.9 ns/op            72   B/op    
 Benchmark_Delete-8       7383976            162.9 ns/op            72   B/op        3 allocs/op
 ```
 
-#### B-Tree
+### B-Tree
 
 ```
 Benchmark_Put-8           162087            7637  ns/op           4620 B/op         10 allocs/op
@@ -33,7 +39,7 @@ Benchmark_Get-8          4419790            270.8 ns/op           104  B/op     
 Benchmark_Delete-8       4503111            265.8 ns/op           104  B/op         4  allocs/op
 ```
 
-#### Skiplist
+### Skiplist
 
 ```
 Benchmark_Put-8           120864            8586  ns/op            4728 B/op        12 allocs/op
