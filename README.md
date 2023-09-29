@@ -1,7 +1,9 @@
 # yojoudb
-A persistent key-value store based on Bitcask.
+An embeddable, fast and persistent key-value storage engine based on Bitcask.
 
 ## Benchmarks
+
+We compared how well yojoudb performs in random writes and random point lookups against several high-performing Golang-based key-value stores using the benchmarking tool [pogreb-bench](https://github.com/akrylysov/pogreb-bench).
 
 ### Performance Metrics
 
