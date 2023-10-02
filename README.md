@@ -1,6 +1,70 @@
 # yojoudb
 An embeddable, fast and persistent key-value storage engine based on Bitcask.
 
+## Getting Started
+
+### Basic Example
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/berylyvos/yojoudb"
+)
+
+func main() {
+	// specify the options
+	options := yojoudb.DefaultOptions
+
+	// open a database
+	db, err := yojoudb.Open(options)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+
+	// put a key
+	key := []byte("hello")
+	if err = db.Put(key, []byte("yojoudb")); err != nil {
+		panic(err)
+	}
+
+	// get a key
+	val, err := db.Get(key)
+	if err != nil {
+		panic(err)
+	}
+	println(string(val))
+
+	// delete a key
+	if err = db.Delete(key); err != nil {
+		panic(err)
+	}
+
+	// create a batch
+	batch := db.NewBatch(yojoudb.DefaultBatchOptions)
+
+	// batch put keys/values
+	for i := 0; i < 100; i++ {
+		_ = batch.Put([]byte(fmt.Sprintf("#%d", i)), []byte(fmt.Sprintf("yojoudb-%d", i)))
+	}
+
+	// commit the batch
+	_ = batch.Commit()
+
+	// create an iterator
+	iter := db.NewIterator(yojoudb.DefaultIteratorOptions)
+	defer iter.Close()
+	// iterate over all data
+	for ; iter.Valid(); iter.Next() {
+		v, _ := iter.Value()
+		println(string(v))
+	}
+}
+```
+
 ## Benchmarks
 
 We compared how well yojoudb performs in random writes and random point lookups against several high-performing Golang-based key-value stores using the benchmarking tool [pogreb-bench](https://github.com/akrylysov/pogreb-bench).
@@ -23,7 +87,7 @@ We compared how well yojoudb performs in random writes and random point lookups 
 
 ## Index Comparison
 
-In this project, we chose [ART](https://github.com/plar/go-adaptive-radix-tree)(Adaptive Radix Tree) as the default in-memory index.
+For yojoudb, we chose to use [ART](https://github.com/plar/go-adaptive-radix-tree)(Adaptive Radix Tree) as the default in-memory index.
 
 ### ART
 
