@@ -1,8 +1,22 @@
 package yojoudb
 
 import (
-	"github.com/berylyvos/yojoudb/meta"
 	"os"
+)
+
+const (
+	B  = 1
+	KB = 1024 * B
+	MB = 1024 * KB
+	GB = 1024 * MB
+)
+
+type IndexType = uint8
+
+const (
+	IndexBTree IndexType = iota
+	IndexART
+	IndexSKL
 )
 
 type Options struct {
@@ -11,7 +25,7 @@ type Options struct {
 	BlockCacheSize uint32
 	Sync           bool
 	BytesPerSync   uint32
-	IndexType      meta.IndexType
+	IndexType      IndexType
 }
 
 type IteratorOptions struct {
@@ -24,20 +38,13 @@ type BatchOptions struct {
 	ReadOnly bool
 }
 
-const (
-	B  = 1
-	KB = 1024 * B
-	MB = 1024 * KB
-	GB = 1024 * MB
-)
-
 var DefaultOptions = Options{
 	DirPath:        tempDBDir(),
 	SegmentSize:    GB,
 	BlockCacheSize: 0,
 	Sync:           false,
 	BytesPerSync:   0,
-	IndexType:      meta.IndexART,
+	IndexType:      IndexART,
 }
 
 var DefaultIteratorOptions = IteratorOptions{
