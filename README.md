@@ -67,7 +67,7 @@ func main() {
 
 ## Benchmarks
 
-We compared how well yojoudb performs in random writes and random point lookups against several high-performing Golang-based key-value stores using the benchmarking tool [pogreb-bench](https://github.com/akrylysov/pogreb-bench).
+We compared how well yojoudb performs in **random writes** and **random point lookups** against several high-performing Golang-based key-value stores using the benchmarking tool [pogreb-bench](https://github.com/akrylysov/pogreb-bench).
 
 ### Performance Metrics
 
@@ -85,30 +85,6 @@ We compared how well yojoudb performs in random writes and random point lookups 
 |-----------|----------|-----------|-------------|
 | 2000000   | 16 ~ 64  | 128 ~ 512 | 5           |
 
-## Index Comparison
+## In-memory Table
 
-For yojoudb, we chose to use [ART](https://github.com/plar/go-adaptive-radix-tree)(Adaptive Radix Tree) as the default in-memory index.
-
-### ART
-
-```
-Benchmark_Put-8           161097            7469  ns/op            4604 B/op        9 allocs/op
-Benchmark_Get-8          6997028            165.9 ns/op            72   B/op        3 allocs/op
-Benchmark_Delete-8       7383976            162.9 ns/op            72   B/op        3 allocs/op
-```
-
-### B-Tree
-
-```
-Benchmark_Put-8           162087            7637  ns/op           4620 B/op         10 allocs/op
-Benchmark_Get-8          4419790            270.8 ns/op           104  B/op         4  allocs/op
-Benchmark_Delete-8       4503111            265.8 ns/op           104  B/op         4  allocs/op
-```
-
-### Skiplist
-
-```
-Benchmark_Put-8           120864            8586  ns/op            4728 B/op        12 allocs/op
-Benchmark_Get-8          5000707            239.5 ns/op            96 B/op          4  allocs/op
-Benchmark_Delete-8       5045925            237.7 ns/op            96 B/op          4  allocs/op
-```
+For yojoudb, we use [ART](https://github.com/plar/go-adaptive-radix-tree)(Adaptive Radix Tree) as the default in-memory table. Alternatively, other index types (B-tree, skiplist) can be specified by `yojoudb.DefaultOptions.IndexType` (`IndexBTree`, `IndexART`, `IndexSKL`).
