@@ -3,13 +3,14 @@ package yojoudb
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/berylyvos/yojoudb/wal"
 	"io"
 	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"sync/atomic"
+
+	"github.com/berylyvos/yojoudb/wal"
 )
 
 const (
@@ -141,7 +142,6 @@ func (db *DB) openMergeFinFile() (*wal.WAL, error) {
 		SegmentFileExt: mergeFinSuffix,
 		Sync:           false,
 		BytesPerSync:   0,
-		BlockCacheSize: 0,
 	})
 }
 

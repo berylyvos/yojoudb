@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/valyala/bytebufferpool"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/valyala/bytebufferpool"
 )
 
 type (
@@ -48,7 +49,6 @@ type segment struct {
 	curBlockIndex uint32
 	curBlockSize  uint32
 	closed        bool
-	cache         BlockCache
 	header        []byte
 	blockPool     sync.Pool
 }
@@ -78,7 +78,7 @@ type ChunkLoc struct {
 }
 
 // openSegmentFile opens a segment file.
-func openSegmentFile(dirPath, extName string, id SegmentID, cache BlockCache) (*segment, error) {
+func openSegmentFile(dirPath, extName string, id SegmentID) (*segment, error) {
 	fd, err := os.OpenFile(
 		SegmentFileName(dirPath, extName, id),
 		os.O_CREATE|os.O_RDWR|os.O_APPEND,
@@ -99,7 +99,6 @@ func openSegmentFile(dirPath, extName string, id SegmentID, cache BlockCache) (*
 		curBlockIndex: uint32(offset / blockSize),
 		curBlockSize:  uint32(offset % blockSize),
 		header:        make([]byte, chunkHeaderSize),
-		cache:         cache,
 		blockPool:     sync.Pool{New: newBlockAndHeader},
 	}, nil
 }
@@ -294,29 +293,8 @@ func (s *segment) readInternal(blockIndex uint32, chunkOffset int64) ([]byte, *C
 		}
 
 		// read an entire block
-		var (
-			ok          bool
-			cachedBlock []byte
-		)
-		if s.cache != nil {
-			cachedBlock, ok = s.cache.Get(s.cacheKey(blockIndex))
-		}
-		// cache hit, get block from the cache
-		if ok {
-			copy(bh.block, cachedBlock)
-		} else {
-			// cache miss, read from file
-			if _, err := s.fd.ReadAt(bh.block[0:sz], offset); err != nil {
-				return nil, nil, err
-			}
-			// cache the block, so that the next time it can be read from the cache.
-			// if the block size is smaller than blockSize, meaning the block is not full,
-			// so we will not cache it.
-			if s.cache != nil && sz == blockSize {
-				cacheBlock := make([]byte, blockSize)
-				copy(cacheBlock, bh.block)
-				s.cache.Add(s.cacheKey(blockIndex), cacheBlock)
-			}
+		if _, err := s.fd.ReadAt(bh.block[0:sz], offset); err != nil {
+			return nil, nil, err
 		}
 
 		// header
@@ -358,10 +336,6 @@ func (s *segment) readInternal(blockIndex uint32, chunkOffset int64) ([]byte, *C
 	}
 
 	return res, nextChunk, nil
-}
-
-func (s *segment) cacheKey(blockIndex uint32) uint64 {
-	return uint64(s.id)<<32 | uint64(blockIndex)
 }
 
 func (sr *segmentReader) Next() ([]byte, *ChunkLoc, error) {
@@ -424,7 +398,7 @@ func DecodeChunkLoc(b []byte) *ChunkLoc {
 	idx += n
 	chunkOffset, n := binary.Uvarint(b[idx:])
 	idx += n
-	chunkSize, n := binary.Uvarint(b[idx:])
+	chunkSize, _ := binary.Uvarint(b[idx:])
 
 	return &ChunkLoc{
 		SegId:       uint32(segId),

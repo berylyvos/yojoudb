@@ -1,11 +1,12 @@
 package wal
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWAL_Write(t *testing.T) {
@@ -116,7 +117,6 @@ func TestWAL_Reader(t *testing.T) {
 		DirPath:        dir,
 		SegmentFileExt: DotSEG,
 		SegmentSize:    32 * MB,
-		BlockCacheSize: 32 * KB * 10,
 	}
 	wal, err := Open(opts)
 	assert.Nil(t, err)
@@ -166,7 +166,6 @@ func TestDelete(t *testing.T) {
 		DirPath:        dir,
 		SegmentFileExt: DotSEG,
 		SegmentSize:    32 * MB,
-		BlockCacheSize: 32 * KB * 10,
 	}
 	wal, err := Open(opts)
 	assert.Nil(t, err)
@@ -188,7 +187,6 @@ func TestWAL_ReaderWithLoc(t *testing.T) {
 		DirPath:        dir,
 		SegmentFileExt: DotSEG,
 		SegmentSize:    8 * MB,
-		BlockCacheSize: 32 * KB * 10,
 	}
 	wal, err := Open(opts)
 	assert.Nil(t, err)

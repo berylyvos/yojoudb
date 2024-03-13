@@ -6,7 +6,6 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gofrs/flock v0.8.1
 	github.com/google/btree v1.1.2
-	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/huandu/skiplist v1.2.0
 	github.com/plar/go-adaptive-radix-tree v1.0.5
 	github.com/stretchr/testify v1.8.3

@@ -17,10 +17,10 @@ type Options struct {
 	// and hint files) in the directory.
 	SegmentFileExt string
 
-	// BlockCacheSize specifies the size of the block cache in number of bytes,
+	// [deprecated] BlockCacheSize specifies the size of the block cache in number of bytes,
 	// normally, taking a multiple of blockSize.
 	// If BlockCacheSize is set to 0, no block cache will be used.
-	BlockCacheSize uint32
+	// BlockCacheSize uint32
 
 	// Sync is whether to synchronize writes through os buffer cache and down
 	// onto the actual disk. Sync is required for durability of a single write
@@ -52,7 +52,6 @@ var DefaultOptions = Options{
 	DirPath:        os.TempDir(),
 	SegmentSize:    GB,
 	SegmentFileExt: DotSEG,
-	BlockCacheSize: blockSize * 10,
 	Sync:           false,
 	BytesPerSync:   0,
 }

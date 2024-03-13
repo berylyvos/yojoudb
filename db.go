@@ -2,15 +2,16 @@ package yojoudb
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sync"
+
 	"github.com/berylyvos/yojoudb/meta"
 	"github.com/berylyvos/yojoudb/utils"
 	"github.com/berylyvos/yojoudb/wal"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofrs/flock"
-	"io"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 const (
@@ -91,7 +92,6 @@ func Open(options Options) (*DB, error) {
 		DirPath:        options.DirPath,
 		SegmentSize:    options.SegmentSize,
 		SegmentFileExt: dataFileSuffix,
-		BlockCacheSize: options.BlockCacheSize,
 		Sync:           options.Sync,
 		BytesPerSync:   options.BytesPerSync,
 	})

@@ -20,12 +20,11 @@ const (
 )
 
 type Options struct {
-	DirPath        string
-	SegmentSize    int64
-	BlockCacheSize uint32
-	Sync           bool
-	BytesPerSync   uint32
-	IndexType      IndexType
+	DirPath      string
+	SegmentSize  int64
+	Sync         bool
+	BytesPerSync uint32
+	IndexType    IndexType
 }
 
 type IteratorOptions struct {
@@ -39,12 +38,11 @@ type BatchOptions struct {
 }
 
 var DefaultOptions = Options{
-	DirPath:        tempDBDir(),
-	SegmentSize:    GB,
-	BlockCacheSize: 0,
-	Sync:           false,
-	BytesPerSync:   0,
-	IndexType:      IndexART,
+	DirPath:      tempDBDir(),
+	SegmentSize:  GB,
+	Sync:         false,
+	BytesPerSync: 0,
+	IndexType:    IndexART,
 }
 
 var DefaultIteratorOptions = IteratorOptions{

@@ -1,11 +1,12 @@
 package benchmark
 
 import (
-	"github.com/berylyvos/yojoudb/wal"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"os"
 	"testing"
+
+	"github.com/berylyvos/yojoudb/wal"
+	"github.com/stretchr/testify/assert"
 )
 
 var w *wal.WAL
@@ -24,7 +25,7 @@ func init() {
 	}
 }
 
-// BenchmarkWAL_Write-8   	  460660	      2656 ns/op	      40 B/op	       2 allocs/op
+// BenchmarkWAL_Write-8   	  898642	      1354 ns/op	      40 B/op	       2 allocs/op
 func BenchmarkWAL_Write(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
