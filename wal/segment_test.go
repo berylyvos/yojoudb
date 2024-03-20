@@ -321,6 +321,55 @@ func TestSegment_Reader_ManyChunks_NOT_FULL(t *testing.T) {
 	assert.Equal(t, sz, len(values))
 }
 
+func TestSegment_Write_LargeSize(t *testing.T) {
+	t.Run("Block-10000", func(t *testing.T) {
+		testSegmentReaderLargeSize(t, blockSize-chunkHeaderSize, 10000)
+	})
+	t.Run("32*Block-1000", func(t *testing.T) {
+		testSegmentReaderLargeSize(t, 32*blockSize, 1000)
+	})
+	t.Run("64*Block-100", func(t *testing.T) {
+		testSegmentReaderLargeSize(t, 64*blockSize, 100)
+	})
+}
+
+func testSegmentReaderLargeSize(t *testing.T, size int, count int) {
+	dir, _ := os.MkdirTemp("", "seg-test-reader-ManyChunks_large_size")
+	seg, err := openSegmentFile(dir, ".SEG", 1)
+	assert.Nil(t, err)
+	defer func() {
+		_ = seg.Remove()
+	}()
+
+	positions := make([]*ChunkLoc, 0)
+	bytes1 := []byte(strings.Repeat("W", size))
+	for i := 1; i <= count; i++ {
+		pos, err := seg.Write(bytes1)
+		assert.Nil(t, err)
+		positions = append(positions, pos)
+	}
+
+	reader := seg.NewReader()
+	var values [][]byte
+	var i = 0
+	for {
+		val, pos, err := reader.Next()
+		if err == io.EOF {
+			break
+		}
+		assert.Nil(t, err)
+		assert.Equal(t, bytes1, val)
+		values = append(values, val)
+
+		assert.Equal(t, positions[i].SegId, pos.SegId)
+		assert.Equal(t, positions[i].BlockIndex, pos.BlockIndex)
+		assert.Equal(t, positions[i].ChunkOffset, pos.ChunkOffset)
+
+		i++
+	}
+	assert.Equal(t, count, len(values))
+}
+
 func TestChunkPosition_Encode(t *testing.T) {
 	validate := func(pos *ChunkLoc) {
 		res := pos.Encode()

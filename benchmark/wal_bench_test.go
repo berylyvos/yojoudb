@@ -3,6 +3,7 @@ package benchmark
 import (
 	"math/rand"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/berylyvos/yojoudb/wal"
@@ -54,6 +55,18 @@ func BenchmarkWAL_Read(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, err := w.Read(positions[rand.Intn(len(positions))])
+		assert.Nil(b, err)
+	}
+}
+
+// BenchmarkWAL_WriteLargeSize-8       9350        140549 ns/op      85 B/op      1 allocs/op
+func BenchmarkWAL_WriteLargeSize(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	content := []byte(strings.Repeat("X", 256*wal.KB+500))
+	for i := 0; i < b.N; i++ {
+		_, err := w.Write(content)
 		assert.Nil(b, err)
 	}
 }

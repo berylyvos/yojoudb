@@ -177,9 +177,18 @@ func (s *segment) Write(data []byte) (*ChunkLoc, error) {
 	}
 
 	dataSize := uint32(len(data))
+
+	// init chunk buffer
+	chunkBuf := bytebufferpool.Get()
+	defer func() {
+		chunkBuf.Reset()
+		bytebufferpool.Put(chunkBuf)
+	}()
+
 	// if the whole data can fit into current block, stuff a full chunk in
 	if s.curBlockSize+dataSize+chunkHeaderSize <= blockSize {
-		if err := s.writeInternal(data, ChunkTypeFull); err != nil {
+		s.appendChunkBuffer(chunkBuf, data, ChunkTypeFull)
+		if err := s.writeChunkBuffer(chunkBuf); err != nil {
 			return nil, err
 		}
 		loc.ChunkSize = dataSize + chunkHeaderSize
@@ -187,47 +196,50 @@ func (s *segment) Write(data []byte) (*ChunkLoc, error) {
 	}
 
 	// if the size of the data exceeds the block size, should be written in batches.
-	var leftSize = dataSize
-	var chunkCount uint32 = 0
+	var (
+		leftSize             = dataSize
+		chunkCount    uint32 = 0
+		currBlockSize        = s.curBlockSize
+	)
 	for leftSize > 0 {
-		chunkSize := blockSize - s.curBlockSize - chunkHeaderSize
+		chunkSize := blockSize - currBlockSize - chunkHeaderSize
 		if chunkSize > leftSize {
 			chunkSize = leftSize
 		}
-		chunk := make([]byte, chunkSize)
 
 		start := dataSize - leftSize
 		end := start + chunkSize
 		if end > dataSize {
 			end = dataSize
 		}
-		copy(chunk[:], data[start:end])
 
-		// write chunks
-		var err error
-		if leftSize == dataSize {
-			err = s.writeInternal(chunk, ChunkTypeFirst)
-		} else if leftSize == chunkSize {
-			err = s.writeInternal(chunk, ChunkTypeLast)
-		} else {
-			err = s.writeInternal(chunk, ChunkTypeMiddle)
+		var chunkType ChunkType
+		switch leftSize {
+		case dataSize:
+			chunkType = ChunkTypeFirst
+		case chunkSize:
+			chunkType = ChunkTypeLast
+		default:
+			chunkType = ChunkTypeMiddle
 		}
-		if err != nil {
-			return nil, err
-		}
+		s.appendChunkBuffer(chunkBuf, data[start:end], chunkType)
+
 		leftSize -= chunkSize
 		chunkCount++
+		currBlockSize = (currBlockSize + chunkSize + chunkHeaderSize) % blockSize
+	}
+
+	if err := s.writeChunkBuffer(chunkBuf); err != nil {
+		return nil, err
 	}
 
 	loc.ChunkSize = chunkCount*chunkHeaderSize + dataSize
 	return loc, nil
 }
 
-func (s *segment) writeInternal(data []byte, chunkType ChunkType) error {
-	dataSize := uint32(len(data))
-
+func (s *segment) appendChunkBuffer(buf *bytebufferpool.ByteBuffer, data []byte, chunkType ChunkType) {
 	// Length    2B:4-5
-	binary.LittleEndian.PutUint16(s.header[4:6], uint16(dataSize))
+	binary.LittleEndian.PutUint16(s.header[4:6], uint16(len(data)))
 	// Type      1B:6
 	s.header[6] = chunkType
 	// Checksum  4B:0-3
@@ -235,26 +247,25 @@ func (s *segment) writeInternal(data []byte, chunkType ChunkType) error {
 	sum = crc32.Update(sum, crc32.IEEETable, data)
 	binary.LittleEndian.PutUint32(s.header[:4], sum)
 
-	// append to the file
-	buf := bytebufferpool.Get()
-	defer func() {
-		bytebufferpool.Put(buf)
-	}()
+	// append header and chunk data to chunk buffer
 	buf.B = append(buf.B, s.header...)
 	buf.B = append(buf.B, data...)
-	if _, err := s.fd.Write(buf.Bytes()); err != nil {
-		return err
-	}
+}
 
+func (s *segment) writeChunkBuffer(buf *bytebufferpool.ByteBuffer) error {
 	if s.curBlockSize > blockSize {
 		panic("can not exceed the max block size")
 	}
 
-	// update curBlockSize, curBlockIndex
-	s.curBlockSize += dataSize + chunkHeaderSize
-	if s.curBlockSize == blockSize {
-		s.curBlockIndex++
-		s.curBlockSize = 0
+	if _, err := s.fd.Write(buf.Bytes()); err != nil {
+		return err
+	}
+
+	// update current write offset
+	s.curBlockSize += uint32(buf.Len())
+	if s.curBlockSize >= blockSize {
+		s.curBlockIndex += s.curBlockSize / blockSize
+		s.curBlockSize = s.curBlockSize % blockSize
 	}
 
 	return nil
