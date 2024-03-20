@@ -160,8 +160,8 @@ func TestWAL_Reader(t *testing.T) {
 	validate(wal2, size)
 }
 
-func TestDelete(t *testing.T) {
-	dir, _ := os.MkdirTemp("", "wal-test-write1")
+func TestWAL_Delete(t *testing.T) {
+	dir, _ := os.MkdirTemp("", "wal-test-delete")
 	opts := Options{
 		DirPath:        dir,
 		SegmentFileExt: DotSEG,
