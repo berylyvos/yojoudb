@@ -147,7 +147,7 @@ func (s *segment) Remove() error {
 }
 
 func (s *segment) Size() int64 {
-	return int64(s.curBlockIndex*blockSize + s.curBlockSize)
+	return int64(s.curBlockIndex)*blockSize + int64(s.curBlockSize)
 }
 
 func (s *segment) Write(data []byte) (*ChunkLoc, error) {
@@ -293,7 +293,7 @@ func (s *segment) readInternal(blockIndex uint32, chunkOffset int64) ([]byte, *C
 
 	for {
 		sz := int64(blockSize)
-		offset := int64(blockIndex * blockSize)
+		offset := int64(blockIndex) * blockSize
 		// the block is not full, meaning that we've reached the last block
 		if offset+sz > segSize {
 			sz = segSize - offset
